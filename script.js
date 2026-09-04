@@ -13,6 +13,48 @@ const DEFAULTS={
 };
 let state=JSON.parse(localStorage.getItem('wintiq_state')||'null')||structuredClone(DEFAULTS);
 let slip=[];
+
+async function loadPublishedPicks(){
+ try{
+  const r=await fetch(`picks.json?ts=${Date.now()}`,{cache:'no-store'});
+  if(!r.ok) throw new Error('picks.json nicht gefunden');
+  const data=await r.json();
+  if(Array.isArray(data.picks)){ state.picks=data.picks; saveState(); renderPicks(); }
+ }catch(e){ console.warn('Konnte veröffentlichte Picks nicht laden:',e); }
+}
+
+function bytesToBase64(bytes){
+ let binary=''; const chunk=0x8000;
+ for(let i=0;i<bytes.length;i+=chunk) binary+=String.fromCharCode(...bytes.subarray(i,i+chunk));
+ return btoa(binary);
+}
+function utf8ToBase64(text){return bytesToBase64(new TextEncoder().encode(text));}
+
+async function publishPicksToGitHub(){
+ const token=$('#ghToken').value.trim();
+ const repo=$('#ghRepo').value.trim();
+ const branch=$('#ghBranch').value.trim()||'main';
+ if(!token||!repo||!repo.includes('/')){showToast('GitHub Token + owner/repository eingeben');return;}
+ const btn=$('#publishGitHub'); btn.disabled=true; btn.textContent='Wird veröffentlicht …';
+ try{
+  const headers={'Accept':'application/vnd.github+json','Authorization':`Bearer ${token}`,'X-GitHub-Api-Version':'2022-11-28','Content-Type':'application/json'};
+  const api=`https://api.github.com/repos/${repo}/contents/picks.json`;
+  const current=await fetch(`${api}?ref=${encodeURIComponent(branch)}`,{headers});
+  let sha;
+  if(current.ok){sha=(await current.json()).sha;}
+  else if(current.status!==404) throw new Error(`GitHub: ${current.status}`);
+  const content=JSON.stringify({picks:state.picks},null,2)+'\n';
+  const body={message:'Update WINTIQ picks',content:utf8ToBase64(content),branch};
+  if(sha) body.sha=sha;
+  const r=await fetch(api,{method:'PUT',headers,body:JSON.stringify(body)});
+  const result=await r.json();
+  if(!r.ok) throw new Error(result.message||`GitHub: ${r.status}`);
+  $('#ghToken').value='';
+  showToast('Picks zu GitHub veröffentlicht ✓');
+ }catch(e){ console.error(e); showToast(`Fehler: ${e.message}`); }
+ finally{btn.disabled=false;btn.textContent='Picks zu GitHub senden';}
+}
+
 const $=s=>document.querySelector(s);
 function saveState(){localStorage.setItem('wintiq_state',JSON.stringify(state));}
 function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
@@ -49,8 +91,10 @@ function renderAdminPicks(){ $('#adminPicks').innerHTML=state.picks.map((p,i)=>`
 $('#adminOpen').onclick=openAdmin;$('#adminClose').onclick=()=>$('#adminPanel').classList.add('hidden');
 $('#addPick').onclick=()=>{state.picks.push({sport:'FUSSBALL',match:'Neues Match',tip:'Dein Tipp',reason:'Eigene redaktionelle Einschätzung.',tag:'NEW',odd:'2.00'});renderAdminPicks()};
 $('#saveAdmin').onclick=()=>{state.heroTitle=$('#aHeroTitle').value||DEFAULTS.heroTitle;state.heroText=$('#aHeroText').value||DEFAULTS.heroText;state.release=$('#aRelease').value||DEFAULTS.release;state.pulse=$('#aPulse').value||DEFAULTS.pulse;document.querySelectorAll('#adminPicks [data-k]').forEach(i=>state.picks[Number(i.dataset.i)][i.dataset.k]=i.value);saveState();applyState();$('#adminPanel').classList.add('hidden');showToast('Admin-Änderungen gespeichert ✓')};
+$('#publishGitHub').onclick=publishPicksToGitHub;
 $('#resetAdmin').onclick=()=>{state=structuredClone(DEFAULTS);saveState();applyState();openAdmin();showToast('Demo zurückgesetzt')};
 
 const mobile=$('#mobile');$('#hamb').onclick=()=>mobile.classList.toggle('open');document.querySelectorAll('.mobile a').forEach(a=>a.onclick=()=>mobile.classList.remove('open'));$('#search').onclick=()=>showToast('Demo-Suche — Event- und Sportfilter');
 const chips=[...document.querySelectorAll('.chip')];chips.forEach(c=>c.onclick=()=>{chips.forEach(x=>x.classList.remove('active'));c.classList.add('active');const s=c.dataset.sport;document.querySelectorAll('.match').forEach(x=>x.classList.toggle('hidden',s!=='all'&&x.dataset.sport!==s))});
 applyState();renderSlip();
+loadPublishedPicks();
