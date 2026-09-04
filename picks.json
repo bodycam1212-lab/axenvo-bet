@@ -1,7 +1,28 @@
 {
   "picks": [
-    {"sport":"FUSSBALL","match":"FC Bayern — Dortmund","tip":"Heimsieg","reason":"WINTIQ-Einschätzung: Heimvorteil + aktuelle Match-Dynamik.","tag":"TOP PICK","odd":"1.78"},
-    {"sport":"TENNIS","match":"Spieler A — Spieler B","tip":"Spieler A","reason":"WINTIQ-Einschätzung: stärkerer Start in die Partie.","tag":"EDGE","odd":"1.85"},
-    {"sport":"BASKETBALL","match":"Lakers — Celtics","tip":"Lakers","reason":"WINTIQ-Einschätzung: Matchup spricht leicht für das Heimteam.","tag":"WATCH","odd":"1.92"}
+    {
+      "sport": "FUSSBALL",
+      "match": "FC Bayern — Dortmund",
+      "tip": "Heimsieg",
+      "reason": "WINTIQ-Einschätzung: TEST der Discord-Verbindung.",
+      "tag": "TOP PICK",
+      "odd": "1.78"
+    },
+    {
+      "sport": "TENNIS",
+      "match": "Spieler A — Spieler B",
+      "tip": "Spieler A",
+      "reason": "WINTIQ-Einschätzung: stärkerer Start in die Partie.",
+      "tag": "EDGE",
+      "odd": "1.85"
+    },
+    {
+      "sport": "BASKETBALL",
+      "match": "Lakers — Celtics",
+      "tip": "Lakers",
+      "reason": "WINTIQ-Einschätzung: Matchup spricht leicht für das Heimteam.",
+      "tag": "WATCH",
+      "odd": "1.92"
+    }
   ]
 }
