@@ -1,0 +1,19 @@
+name: Discord Pick Meldung
+
+on:
+  push:
+    paths:
+      - "picks.json"
+
+jobs:
+  discord:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Discord Nachricht senden
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d '{"content":"🟢 **WINTIQ BET – Picks aktualisiert!**\n\nEin neuer Pick wurde auf der Website eingetragen oder geändert."}' \
+          "$WEBHOOK"
