@@ -1,9 +1,10 @@
 /* =========================================================
-   WINTIQ BET
-   SCRIPT.JS
+   WINTIQ BET - SCRIPT.JS
    ========================================================= */
-const DEMO_USER = 'Valentino';
-const DEMO_PASS = 'KOlin7127';
+
+/* LOGIN */
+const DEMO_USER = 'WINTIQ';
+const DEMO_PASS = 'Wintiq2026!';
 
 
 /* =========================================================
@@ -45,10 +46,6 @@ const DEFAULTS = {
 };
 
 
-/* =========================================================
-   STATE
-   ========================================================= */
-
 let state =
   JSON.parse(localStorage.getItem('wintiq_state') || 'null')
   || structuredClone(DEFAULTS);
@@ -75,6 +72,7 @@ function saveState(){
    ========================================================= */
 
 function showToast(msg){
+
   const t = $('#toast');
 
   if(!t) return;
@@ -89,14 +87,16 @@ function showToast(msg){
 
 
 /* =========================================================
-   BASE64 / GITHUB
+   BASE64
    ========================================================= */
 
 function bytesToBase64(bytes){
+
   let binary = '';
   const chunk = 0x8000;
 
   for(let i = 0; i < bytes.length; i += chunk){
+
     binary += String.fromCharCode(
       ...bytes.subarray(i, i + chunk)
     );
@@ -107,13 +107,19 @@ function bytesToBase64(bytes){
 
 
 function utf8ToBase64(text){
+
   return bytesToBase64(
     new TextEncoder().encode(text)
   );
 }
 
 
+/* =========================================================
+   GITHUB HEADERS
+   ========================================================= */
+
 function getGitHubHeaders(token){
+
   return {
     'Accept': 'application/vnd.github+json',
     'Authorization': `Bearer ${token}`,
@@ -129,20 +135,28 @@ function getGitHubHeaders(token){
 
 async function testGitHubToken(){
 
-  const token = $('#ghToken')?.value.trim();
-  const repo = $('#ghRepo')?.value.trim();
+  const token =
+    $('#ghToken')?.value.trim();
+
+  const repo =
+    $('#ghRepo')?.value.trim();
+
   const branch =
     $('#ghBranch')?.value.trim() || 'main';
 
-  const status = $('#ghStatus');
-  const btn = $('#testGitHub');
+  const status =
+    $('#ghStatus');
+
+  const btn =
+    $('#testGitHub');
 
 
   if(!token){
 
     if(status){
+
       status.textContent =
-        '❌ Bitte zuerst deinen neuen GitHub-Token eintragen.';
+        '❌ Bitte zuerst deinen GitHub-Token eintragen.';
 
       status.className =
         'github-status error';
@@ -155,6 +169,7 @@ async function testGitHubToken(){
   if(!repo || !repo.includes('/')){
 
     if(status){
+
       status.textContent =
         '❌ Repository muss z.B. bodycam1212-lab/axenvo-bet sein.';
 
@@ -167,12 +182,14 @@ async function testGitHubToken(){
 
 
   if(btn){
+
     btn.disabled = true;
     btn.textContent = 'Prüfe …';
   }
 
 
   if(status){
+
     status.textContent =
       'GitHub-Zugriff wird geprüft …';
 
@@ -187,24 +204,26 @@ async function testGitHubToken(){
       getGitHubHeaders(token);
 
 
-    /* Repository prüfen */
-
-    const repoResponse = await fetch(
-      `https://api.github.com/repos/${repo}`,
-      {
-        method: 'GET',
-        headers
-      }
-    );
+    const repoResponse =
+      await fetch(
+        `https://api.github.com/repos/${repo}`,
+        {
+          method: 'GET',
+          headers
+        }
+      );
 
 
     const repoData =
-      await repoResponse.json().catch(() => ({}));
+      await repoResponse
+        .json()
+        .catch(() => ({}));
 
 
     if(!repoResponse.ok){
 
       if(repoResponse.status === 401){
+
         throw new Error(
           'Token ungültig oder abgelaufen.'
         );
@@ -212,6 +231,7 @@ async function testGitHubToken(){
 
 
       if(repoResponse.status === 403){
+
         throw new Error(
           'GitHub verweigert diesem Token den Zugriff auf das Repository.'
         );
@@ -219,6 +239,7 @@ async function testGitHubToken(){
 
 
       if(repoResponse.status === 404){
+
         throw new Error(
           `Repository "${repo}" wurde nicht gefunden oder der Token hat keinen Zugriff darauf.`
         );
@@ -232,36 +253,37 @@ async function testGitHubToken(){
     }
 
 
-    /* Schreibrecht prüfen */
-
     if(
       repoData.permissions &&
       repoData.permissions.push === false
     ){
+
       throw new Error(
         'Der Token kann das Repository lesen, besitzt aber kein Schreibrecht. Bei GitHub muss Contents auf "Read and write" stehen.'
       );
     }
 
 
-    /* picks.json prüfen */
-
-    const fileResponse = await fetch(
-      `https://api.github.com/repos/${repo}/contents/picks.json?ref=${encodeURIComponent(branch)}`,
-      {
-        method: 'GET',
-        headers
-      }
-    );
+    const fileResponse =
+      await fetch(
+        `https://api.github.com/repos/${repo}/contents/picks.json?ref=${encodeURIComponent(branch)}`,
+        {
+          method: 'GET',
+          headers
+        }
+      );
 
 
     const fileData =
-      await fileResponse.json().catch(() => ({}));
+      await fileResponse
+        .json()
+        .catch(() => ({}));
 
 
     if(fileResponse.ok){
 
       if(status){
+
         status.textContent =
           `✓ Alles okay. Repository, Branch "${branch}" und picks.json sind erreichbar.`;
 
@@ -272,6 +294,7 @@ async function testGitHubToken(){
     }else if(fileResponse.status === 404){
 
       if(status){
+
         status.textContent =
           `✓ Token funktioniert. Repository "${repo}" ist erreichbar. picks.json wird beim ersten Upload erstellt.`;
 
@@ -282,7 +305,7 @@ async function testGitHubToken(){
     }else if(fileResponse.status === 403){
 
       throw new Error(
-        'GitHub verweigert den Zugriff auf picks.json. Prüfe beim Fine-grained Token den Repository-Zugriff und Contents → Read and write.'
+        'GitHub verweigert den Zugriff auf picks.json. Prüfe Repository-Zugriff und Contents → Read and write.'
       );
 
     }else{
@@ -303,6 +326,7 @@ async function testGitHubToken(){
 
 
     if(status){
+
       status.textContent =
         `❌ ${error.message}`;
 
@@ -314,6 +338,7 @@ async function testGitHubToken(){
   }finally{
 
     if(btn){
+
       btn.disabled = false;
       btn.textContent = '🧪 Token prüfen';
     }
@@ -350,6 +375,7 @@ async function publishPicksToGitHub(){
     );
 
     if(status){
+
       status.textContent =
         '❌ Bitte zuerst den GitHub-Token eintragen.';
 
@@ -368,6 +394,7 @@ async function publishPicksToGitHub(){
     );
 
     if(status){
+
       status.textContent =
         '❌ Repository muss z.B. bodycam1212-lab/axenvo-bet sein.';
 
@@ -380,12 +407,15 @@ async function publishPicksToGitHub(){
 
 
   if(btn){
+
     btn.disabled = true;
-    btn.textContent = 'Wird veröffentlicht …';
+    btn.textContent =
+      'Wird veröffentlicht …';
   }
 
 
   if(status){
+
     status.textContent =
       'Picks werden zu GitHub gesendet …';
 
@@ -403,26 +433,29 @@ async function publishPicksToGitHub(){
       `https://api.github.com/repos/${repo}/contents/picks.json`;
 
 
-    /* Aktuelle Datei holen */
-
-    const currentResponse = await fetch(
-      `${api}?ref=${encodeURIComponent(branch)}`,
-      {
-        method: 'GET',
-        headers
-      }
-    );
+    const currentResponse =
+      await fetch(
+        `${api}?ref=${encodeURIComponent(branch)}`,
+        {
+          method: 'GET',
+          headers
+        }
+      );
 
 
     const currentData =
-      await currentResponse.json().catch(() => ({}));
+      await currentResponse
+        .json()
+        .catch(() => ({}));
+
 
     let sha = null;
 
 
     if(currentResponse.ok){
 
-      sha = currentData.sha;
+      sha =
+        currentData.sha;
 
     }else if(currentResponse.status === 404){
 
@@ -450,8 +483,6 @@ async function publishPicksToGitHub(){
     }
 
 
-    /* Picks vorbereiten */
-
     const content =
       JSON.stringify(
         {
@@ -467,31 +498,40 @@ async function publishPicksToGitHub(){
 
 
     const body = {
-      message: 'Update WINTIQ picks',
-      content: encodedContent,
-      branch: branch
+
+      message:
+        'Update WINTIQ picks',
+
+      content:
+        encodedContent,
+
+      branch:
+        branch
     };
 
 
     if(sha){
-      body.sha = sha;
+
+      body.sha =
+        sha;
     }
 
 
-    /* Datei zu GitHub senden */
-
-    const response = await fetch(
-      api,
-      {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(body)
-      }
-    );
+    const response =
+      await fetch(
+        api,
+        {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(body)
+        }
+      );
 
 
     const result =
-      await response.json().catch(() => ({}));
+      await response
+        .json()
+        .catch(() => ({}));
 
 
     if(!response.ok){
@@ -543,8 +583,6 @@ async function publishPicksToGitHub(){
     }
 
 
-    /* Token nach erfolgreichem Upload löschen */
-
     $('#ghToken').value = '';
 
 
@@ -562,8 +600,6 @@ async function publishPicksToGitHub(){
       'Picks erfolgreich zu GitHub gesendet ✓'
     );
 
-
-    /* Seite kurz später aktualisieren */
 
     setTimeout(
       loadPublishedPicks,
@@ -608,22 +644,24 @@ async function publishPicksToGitHub(){
 
 
 /* =========================================================
-   PUBLISHED PICKS LADEN
+   PICKS VON GITHUB LADEN
    ========================================================= */
 
 async function loadPublishedPicks(){
 
   try{
 
-    const r = await fetch(
-      `picks.json?ts=${Date.now()}`,
-      {
-        cache: 'no-store'
-      }
-    );
+    const r =
+      await fetch(
+        `picks.json?ts=${Date.now()}`,
+        {
+          cache: 'no-store'
+        }
+      );
 
 
     if(!r.ok){
+
       throw new Error(
         'picks.json nicht gefunden'
       );
@@ -679,17 +717,26 @@ function login(){
     );
 
 
-    $('#loginGate')?.classList.add(
-      'hidden'
-    );
+    $('#loginGate')
+      ?.classList
+      .add('hidden');
 
-    $('#app')?.classList.remove(
-      'app-hidden'
-    );
 
-    document.body.classList.remove(
-      'locked'
-    );
+    $('#app')
+      ?.classList
+      .remove('app-hidden');
+
+
+    document.body
+      .classList
+      .remove('locked');
+
+
+    if($('#loginError')){
+
+      $('#loginError').textContent =
+        '';
+    }
 
 
     applyState();
@@ -706,7 +753,7 @@ function login(){
 }
 
 
-/* Login-Formular */
+/* LOGIN FORM */
 
 if($('#loginForm')){
 
@@ -722,7 +769,7 @@ if($('#loginForm')){
 }
 
 
-/* Bereits eingeloggt? */
+/* BEREITS EINGELOGGT */
 
 if(
   sessionStorage.getItem(
@@ -730,17 +777,19 @@ if(
   ) === '1'
 ){
 
-  $('#loginGate')?.classList.add(
-    'hidden'
-  );
+  $('#loginGate')
+    ?.classList
+    .add('hidden');
 
-  $('#app')?.classList.remove(
-    'app-hidden'
-  );
 
-  document.body.classList.remove(
-    'locked'
-  );
+  $('#app')
+    ?.classList
+    .remove('app-hidden');
+
+
+  document.body
+    .classList
+    .remove('locked');
 }
 
 
@@ -760,7 +809,8 @@ function lock(){
 
 if($('#logout')){
 
-  $('#logout').onclick = lock;
+  $('#logout').onclick =
+    lock;
 }
 
 
@@ -770,10 +820,8 @@ if($('#logout')){
 
 function pad(n){
 
-  return String(n).padStart(
-    2,
-    '0'
-  );
+  return String(n)
+    .padStart(2,'0');
 }
 
 
@@ -781,7 +829,8 @@ function updateCountdown(){
 
   const release =
     new Date(
-      state.release + 'T00:00:00'
+      state.release +
+      'T00:00:00'
     );
 
 
@@ -848,7 +897,7 @@ function renderMatches(){
     {
       sport: 'football',
       league: 'UEFA · DEMO',
-      time: '● LIVE 68\'',
+      time: "● LIVE 68'",
       a: 'FC Bayern',
       b: 'Dortmund',
       score: '2 : 1',
@@ -864,7 +913,7 @@ function renderMatches(){
     {
       sport: 'football',
       league: 'LA LIGA · DEMO',
-      time: '● LIVE 31\'',
+      time: "● LIVE 31'",
       a: 'Real Madrid',
       b: 'Barcelona',
       score: '0 : 0',
@@ -970,7 +1019,11 @@ function renderMatches(){
 
 
         <div
-          class="odds ${m.odds.length === 2 ? 'two' : ''}"
+          class="odds ${
+            m.odds.length === 2
+              ? 'two'
+              : ''
+          }"
         >
 
           ${m.odds.map(o => `
@@ -999,8 +1052,6 @@ function renderMatches(){
     `).join('');
 
 
-  /* Quote Buttons */
-
   document
     .querySelectorAll('.odds button')
     .forEach(b => {
@@ -1009,7 +1060,9 @@ function renderMatches(){
 
         const i =
           slip.findIndex(
-            x => x.bet === b.dataset.bet
+            x =>
+              x.bet ===
+              b.dataset.bet
           );
 
 
@@ -1023,8 +1076,13 @@ function renderMatches(){
         }else{
 
           slip.push({
-            bet: b.dataset.bet,
-            odd: b.dataset.odd
+
+            bet:
+              b.dataset.bet,
+
+            odd:
+              b.dataset.odd
+
           });
         }
 
@@ -1033,9 +1091,11 @@ function renderMatches(){
 
 
         showToast(
+
           i >= 0
             ? 'Demo-Tipp entfernt'
             : 'Demo-Quote hinzugefügt ✓'
+
         );
       };
     });
@@ -1043,7 +1103,7 @@ function renderMatches(){
 
 
 /* =========================================================
-   BET SLIP
+   SLIP
    ========================================================= */
 
 function renderSlip(){
@@ -1078,7 +1138,9 @@ function renderSlip(){
 
 
     if($('#total')){
-      $('#total').textContent = '—';
+
+      $('#total').textContent =
+        '—';
     }
 
     return;
@@ -1119,7 +1181,8 @@ function renderSlip(){
     $('#total').textContent =
       slip
         .reduce(
-          (a,x) => a * Number(x.odd),
+          (a,x) =>
+            a * Number(x.odd),
           1
         )
         .toFixed(2);
@@ -1127,7 +1190,9 @@ function renderSlip(){
 
 
   document
-    .querySelectorAll('.slip-item button')
+    .querySelectorAll(
+      '.slip-item button'
+    )
     .forEach(b => {
 
       b.onclick = () => {
@@ -1143,8 +1208,6 @@ function renderSlip(){
 }
 
 
-/* Slip leeren */
-
 if($('#clear')){
 
   $('#clear').onclick = () => {
@@ -1155,8 +1218,6 @@ if($('#clear')){
   };
 }
 
-
-/* Demo-Wette */
 
 if($('#place')){
 
@@ -1247,8 +1308,6 @@ function renderPicks(){
 }
 
 
-/* Pick in Slip */
-
 window.addPickToSlip = i => {
 
   const p =
@@ -1279,7 +1338,7 @@ window.addPickToSlip = i => {
 
 
 /* =========================================================
-   STATE AUF SEITE ANWENDEN
+   STATE
    ========================================================= */
 
 function applyState(){
@@ -1303,12 +1362,14 @@ function applyState(){
 
 
   if($('#heroText')){
+
     $('#heroText').textContent =
       state.heroText;
   }
 
 
   if($('#pulseText')){
+
     $('#pulseText').textContent =
       state.pulse;
   }
@@ -1316,7 +1377,8 @@ function applyState(){
 
   const date =
     new Date(
-      state.release + 'T00:00:00'
+      state.release +
+      'T00:00:00'
     );
 
 
@@ -1331,14 +1393,16 @@ function applyState(){
 
 
   if($('#releaseDateBig')){
-    $('#releaseDateBig').textContent =
-      nice;
+
+    $('#releaseDateBig')
+      .textContent = nice;
   }
 
 
   if($('#releaseMeta')){
-    $('#releaseMeta').textContent =
-      nice;
+
+    $('#releaseMeta')
+      .textContent = nice;
   }
 
 
@@ -1366,20 +1430,32 @@ function openAdmin(){
   );
 
 
-  $('#aHeroTitle').value =
-    state.heroTitle;
+  if($('#aHeroTitle')){
+
+    $('#aHeroTitle').value =
+      state.heroTitle;
+  }
 
 
-  $('#aHeroText').value =
-    state.heroText;
+  if($('#aHeroText')){
+
+    $('#aHeroText').value =
+      state.heroText;
+  }
 
 
-  $('#aRelease').value =
-    state.release;
+  if($('#aRelease')){
+
+    $('#aRelease').value =
+      state.release;
+  }
 
 
-  $('#aPulse').value =
-    state.pulse;
+  if($('#aPulse')){
+
+    $('#aPulse').value =
+      state.pulse;
+  }
 
 
   if(
@@ -1404,7 +1480,8 @@ function openAdmin(){
 
   if($('#ghStatus')){
 
-    $('#ghStatus').textContent = '';
+    $('#ghStatus').textContent =
+      '';
 
     $('#ghStatus').className =
       'github-status';
@@ -1414,8 +1491,6 @@ function openAdmin(){
   renderAdminPicks();
 }
 
-
-/* Admin Picks */
 
 function renderAdminPicks(){
 
@@ -1472,13 +1547,17 @@ function renderAdminPicks(){
 
 
   document
-    .querySelectorAll('[data-remove]')
+    .querySelectorAll(
+      '[data-remove]'
+    )
     .forEach(b => {
 
       b.onclick = () => {
 
         state.picks.splice(
-          Number(b.dataset.remove),
+          Number(
+            b.dataset.remove
+          ),
           1
         );
 
@@ -1488,7 +1567,7 @@ function renderAdminPicks(){
 }
 
 
-/* Admin öffnen */
+/* ADMIN ÖFFNEN */
 
 if($('#adminOpen')){
 
@@ -1497,7 +1576,7 @@ if($('#adminOpen')){
 }
 
 
-/* Admin schließen */
+/* ADMIN SCHLIESSEN */
 
 if($('#adminClose')){
 
@@ -1510,7 +1589,7 @@ if($('#adminClose')){
 }
 
 
-/* Pick hinzufügen */
+/* PICK HINZUFÜGEN */
 
 if($('#addPick')){
 
@@ -1518,18 +1597,24 @@ if($('#addPick')){
 
     state.picks.push({
 
-      sport: 'FUSSBALL',
+      sport:
+        'FUSSBALL',
 
-      match: 'Neues Match',
+      match:
+        'Neues Match',
 
-      tip: 'Dein Tipp',
+      tip:
+        'Dein Tipp',
 
       reason:
         'Eigene redaktionelle Einschätzung.',
 
-      tag: 'NEW',
+      tag:
+        'NEW',
 
-      odd: '2.00'
+      odd:
+        '2.00'
+
     });
 
 
@@ -1623,7 +1708,7 @@ if($('#testGitHub')){
 
 
 /* =========================================================
-   ADMIN RESET
+   RESET
    ========================================================= */
 
 if($('#resetAdmin')){
@@ -1651,7 +1736,7 @@ if($('#resetAdmin')){
 
 
 /* =========================================================
-   MOBILE MENU
+   MOBILE
    ========================================================= */
 
 const mobile =
@@ -1670,7 +1755,9 @@ if($('#hamb')){
 
 
 document
-  .querySelectorAll('.mobile a')
+  .querySelectorAll(
+    '.mobile a'
+  )
   .forEach(a => {
 
     a.onclick = () => {
@@ -1702,7 +1789,9 @@ if($('#search')){
    ========================================================= */
 
 const chips = [
-  ...document.querySelectorAll('.chip')
+  ...document.querySelectorAll(
+    '.chip'
+  )
 ];
 
 
@@ -1715,7 +1804,6 @@ chips.forEach(c => {
       x.classList.remove(
         'active'
       );
-
     });
 
 
@@ -1729,7 +1817,9 @@ chips.forEach(c => {
 
 
     document
-      .querySelectorAll('.match')
+      .querySelectorAll(
+        '.match'
+      )
       .forEach(x => {
 
         x.classList.toggle(
