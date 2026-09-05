@@ -2,11 +2,6 @@
    WINTIQ BET
    SCRIPT.JS
    ========================================================= */
-
-/* LOGIN
-   DEINEN BISHERIGEN BENUTZERNAMEN UND DEIN BISHERIGES
-   PASSWORT HIER EINTRAGEN.
-*/
 const DEMO_USER = 'Valentino';
 const DEMO_PASS = 'KOlin7127';
 
