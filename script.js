@@ -4,9 +4,9 @@
    ========================================================= */
 
 
-  /* LOGIN */
-const DEMO_USER = 'WINTIQ_ADMIN';
-const DEMO_PASS = 'Wintiq!Admin2026#';
+/* LOGIN */
+const DEMO_USER = 'WINTIQ_OWNER';
+const DEMO_PASS = 'Wintiq#Bet2026!X7';
 
 /* =========================================================
    DEFAULT DATEN
@@ -742,11 +742,6 @@ async function publishPicksToGitHub() {
     const api =
       `https://api.github.com/repos/${repo}/contents/picks.json`;
 
-    /*
-      Zuerst aktuellen Stand von picks.json holen,
-      damit wir dessen SHA beim Update mitsenden können.
-    */
-
     const currentResponse =
       await fetch(
         `${api}?ref=${encodeURIComponent(branch)}`,
@@ -777,10 +772,6 @@ async function publishPicksToGitHub() {
       );
     }
 
-    /*
-      AKTUELLEN ADMIN-STATE verwenden.
-    */
-
     const content =
       JSON.stringify(
         {
@@ -801,11 +792,6 @@ async function publishPicksToGitHub() {
       branch:
         branch
     };
-
-    /*
-      Beim Ändern einer bestehenden Datei
-      muss der SHA mitgesendet werden.
-    */
 
     if (sha) {
       body.sha = sha;
@@ -853,11 +839,6 @@ async function publishPicksToGitHub() {
       throw new Error(message);
     }
 
-    /*
-      Token nach erfolgreicher Veröffentlichung
-      aus dem Eingabefeld entfernen.
-    */
-
     $('#ghToken').value = '';
 
     setGitHubStatus(
@@ -868,11 +849,6 @@ async function publishPicksToGitHub() {
     showToast(
       'Picks erfolgreich zu GitHub gesendet ✓'
     );
-
-    /*
-      Kurz warten, damit GitHub Pages / Actions
-      Zeit zum Aktualisieren bekommt.
-    */
 
     setTimeout(() => {
       loadPublishedPicks();
@@ -1417,9 +1393,6 @@ function init() {
     1000
   );
 
-  /*
-    picks.json beim Laden aktualisieren.
-  */
   loadPublishedPicks();
 }
 
