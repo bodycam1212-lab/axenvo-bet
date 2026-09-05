@@ -4,9 +4,13 @@
    ========================================================= */
 
 
-/* LOGIN */
-const DEMO_USER = 'WINTIQ_OWNER';
-const DEMO_PASS = 'Wintiq#Bet2026!X7';
+/* =========================================================
+   LOGIN
+   ========================================================= */
+
+const DEMO_USER = 'WINTIQ_MASTER';
+const DEMO_PASS = 'W!ntiqMaster#2026X';
+
 
 /* =========================================================
    DEFAULT DATEN
@@ -742,6 +746,11 @@ async function publishPicksToGitHub() {
     const api =
       `https://api.github.com/repos/${repo}/contents/picks.json`;
 
+    /*
+      Zuerst aktuellen Stand von picks.json holen,
+      damit wir dessen SHA beim Update mitsenden können.
+    */
+
     const currentResponse =
       await fetch(
         `${api}?ref=${encodeURIComponent(branch)}`,
@@ -772,6 +781,10 @@ async function publishPicksToGitHub() {
       );
     }
 
+    /*
+      AKTUELLEN ADMIN-STATE verwenden.
+    */
+
     const content =
       JSON.stringify(
         {
@@ -792,6 +805,11 @@ async function publishPicksToGitHub() {
       branch:
         branch
     };
+
+    /*
+      Beim Ändern einer bestehenden Datei
+      muss der SHA mitgesendet werden.
+    */
 
     if (sha) {
       body.sha = sha;
@@ -839,6 +857,11 @@ async function publishPicksToGitHub() {
       throw new Error(message);
     }
 
+    /*
+      Token nach erfolgreicher Veröffentlichung
+      aus dem Eingabefeld entfernen.
+    */
+
     $('#ghToken').value = '';
 
     setGitHubStatus(
@@ -849,6 +872,11 @@ async function publishPicksToGitHub() {
     showToast(
       'Picks erfolgreich zu GitHub gesendet ✓'
     );
+
+    /*
+      Kurz warten, damit GitHub Pages / Actions
+      Zeit zum Aktualisieren bekommt.
+    */
 
     setTimeout(() => {
       loadPublishedPicks();
@@ -1090,11 +1118,12 @@ function renderAdminPicks() {
           </label>
 
           <label class="full">
-            Begründung
+            🧠 Einschätzung
             <textarea
               data-field="reason"
               data-index="${index}"
               rows="3"
+              placeholder="WINTIQ-Einschätzung eingeben ..."
             >${escapeHtml(pick.reason)}</textarea>
           </label>
 
@@ -1393,6 +1422,9 @@ function init() {
     1000
   );
 
+  /*
+    picks.json beim Laden aktualisieren.
+  */
   loadPublishedPicks();
 }
 
