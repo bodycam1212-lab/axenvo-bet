@@ -4,19 +4,9 @@
    ========================================================= */
 
 
-/* =========================================================
-   LOGIN
-   ========================================================= */
-
-const DEMO_USER = 'WINTIQ';
-
-/*
-  WICHTIG:
-  Hier dein bisheriges WINTIQ-Passwort eintragen.
-  NICHT den GitHub Token hier eintragen.
-*/
-const DEMO_PASS = 'HIER_DEIN_PASSWORT_EINTRAGEN';
-
+  /* LOGIN */
+const DEMO_USER = 'WINTIQ_ADMIN';
+const DEMO_PASS = 'Wintiq!Admin2026#';
 
 /* =========================================================
    DEFAULT DATEN
