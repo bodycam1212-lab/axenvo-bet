@@ -3,61 +3,46 @@
    SCRIPT.JS
    ========================================================= */
 
-/*
- * DEINE BEIDEN BISHERIGEN LOGIN-ZEILEN
- * BITTE OBEN IN DEINER AKTUELLEN DATEI BEIBEHALTEN:
- *
- * const DEMO_USER='...';
- * const DEMO_PASS='...';
- *
- * NICHT ÄNDERN.
- */
+/* LOGIN
+   DEINEN BISHERIGEN BENUTZERNAMEN UND DEIN BISHERIGES
+   PASSWORT HIER EINTRAGEN.
+*/
+const DEMO_USER = 'Valentino';
+const DEMO_PASS = 'KOlin7127';
 
 
 /* =========================================================
    DEFAULTS
-========================================================= */
-const DEMO_USER='Valentino';
-const DEMO_PASS='KOlin7127';
+   ========================================================= */
 
 const DEFAULTS = {
   heroTitle: 'SPORT.\nDATA.\nMOMENTUM.',
-
-  heroText:
-    'Ein radikales Sports-Interface für schnelle Entscheidungen, klare Daten und redaktionelle Picks.',
-
+  heroText: 'Ein radikales Sports-Interface für schnelle Entscheidungen, klare Daten und redaktionelle Picks.',
   release: '2026-09-11',
-
-  pulse:
-    'Live intelligence · Demo feed',
+  pulse: 'Live intelligence · Demo feed',
 
   picks: [
     {
       sport: 'FUSSBALL',
       match: 'FC Bayern — Dortmund',
       tip: 'Heimsieg',
-      reason:
-        'WINTIQ-Einschätzung: Heimvorteil + aktuelle Match-Dynamik.',
+      reason: 'WINTIQ-Einschätzung: Heimvorteil + aktuelle Match-Dynamik.',
       tag: 'TOP PICK',
       odd: '1.78'
     },
-
     {
       sport: 'TENNIS',
       match: 'Spieler A — Spieler B',
       tip: 'Spieler A',
-      reason:
-        'WINTIQ-Einschätzung: stärkerer Start in die Partie.',
+      reason: 'WINTIQ-Einschätzung: stärkerer Start in die Partie.',
       tag: 'EDGE',
       odd: '1.85'
     },
-
     {
       sport: 'BASKETBALL',
       match: 'Lakers — Celtics',
       tip: 'Lakers',
-      reason:
-        'WINTIQ-Einschätzung: Matchup spricht leicht für das Heimteam.',
+      reason: 'WINTIQ-Einschätzung: Matchup spricht leicht für das Heimteam.',
       tag: 'WATCH',
       odd: '1.92'
     }
@@ -67,265 +52,181 @@ const DEFAULTS = {
 
 /* =========================================================
    STATE
-========================================================= */
+   ========================================================= */
 
 let state =
-  JSON.parse(
-    localStorage.getItem('wintiq_state') || 'null'
-  ) || structuredClone(DEFAULTS);
+  JSON.parse(localStorage.getItem('wintiq_state') || 'null')
+  || structuredClone(DEFAULTS);
 
 let slip = [];
-
-
-/* =========================================================
-   SELECTOR
-========================================================= */
 
 const $ = s => document.querySelector(s);
 
 
 /* =========================================================
-   LOCAL STORAGE
-========================================================= */
+   STORAGE
+   ========================================================= */
 
-function saveState() {
-
+function saveState(){
   localStorage.setItem(
     'wintiq_state',
     JSON.stringify(state)
   );
-
 }
 
 
 /* =========================================================
    TOAST
-========================================================= */
+   ========================================================= */
 
-function showToast(msg) {
-
+function showToast(msg){
   const t = $('#toast');
 
-  if (!t) return;
+  if(!t) return;
 
   t.textContent = msg;
-
   t.classList.add('show');
 
-  setTimeout(
-    () => t.classList.remove('show'),
-    2500
-  );
-
+  setTimeout(() => {
+    t.classList.remove('show');
+  }, 2500);
 }
 
 
 /* =========================================================
-   GITHUB
-========================================================= */
+   BASE64 / GITHUB
+   ========================================================= */
 
-/*
- * UTF-8 Bytes → Base64
- *
- * Wichtig für Umlaute und Sonderzeichen wie:
- * Bayern — Dortmund
- */
-
-function bytesToBase64(bytes) {
-
+function bytesToBase64(bytes){
   let binary = '';
-
   const chunk = 0x8000;
 
-  for (
-    let i = 0;
-    i < bytes.length;
-    i += chunk
-  ) {
-
+  for(let i = 0; i < bytes.length; i += chunk){
     binary += String.fromCharCode(
-      ...bytes.subarray(
-        i,
-        i + chunk
-      )
+      ...bytes.subarray(i, i + chunk)
     );
-
   }
 
   return btoa(binary);
 }
 
 
-function utf8ToBase64(text) {
-
+function utf8ToBase64(text){
   return bytesToBase64(
     new TextEncoder().encode(text)
   );
-
 }
 
 
-/* =========================================================
-   GITHUB API HEADER
-========================================================= */
-
-function getGitHubHeaders(token) {
-
+function getGitHubHeaders(token){
   return {
-
-    'Accept':
-      'application/vnd.github+json',
-
-    'Authorization':
-      `Bearer ${token}`,
-
-    'X-GitHub-Api-Version':
-      '2022-11-28',
-
-    'Content-Type':
-      'application/json'
-
+    'Accept': 'application/vnd.github+json',
+    'Authorization': `Bearer ${token}`,
+    'X-GitHub-Api-Version': '2022-11-28',
+    'Content-Type': 'application/json'
   };
-
 }
 
 
 /* =========================================================
-   GITHUB TOKEN PRÜFEN
-========================================================= */
+   GITHUB TOKEN TEST
+   ========================================================= */
 
-async function testGitHubToken() {
+async function testGitHubToken(){
 
-  const token =
-    $('#ghToken')?.value.trim();
-
-  const repo =
-    $('#ghRepo')?.value.trim();
-
+  const token = $('#ghToken')?.value.trim();
+  const repo = $('#ghRepo')?.value.trim();
   const branch =
     $('#ghBranch')?.value.trim() || 'main';
 
-  const status =
-    $('#ghStatus');
-
-  const btn =
-    $('#testGitHub');
+  const status = $('#ghStatus');
+  const btn = $('#testGitHub');
 
 
-  /* Eingaben */
+  if(!token){
 
-  if (!token) {
-
-    if (status) {
-
+    if(status){
       status.textContent =
         '❌ Bitte zuerst deinen neuen GitHub-Token eintragen.';
 
       status.className =
         'github-status error';
-
     }
 
     return;
-
   }
 
 
-  if (
-    !repo ||
-    !repo.includes('/')
-  ) {
+  if(!repo || !repo.includes('/')){
 
-    if (status) {
-
+    if(status){
       status.textContent =
         '❌ Repository muss z.B. bodycam1212-lab/axenvo-bet sein.';
 
       status.className =
         'github-status error';
-
     }
 
     return;
-
   }
 
 
-  if (btn) {
-
+  if(btn){
     btn.disabled = true;
-
-    btn.textContent =
-      'Prüfe …';
-
+    btn.textContent = 'Prüfe …';
   }
 
 
-  if (status) {
-
+  if(status){
     status.textContent =
       'GitHub-Zugriff wird geprüft …';
 
     status.className =
       'github-status loading';
-
   }
 
 
-  try {
+  try{
 
     const headers =
       getGitHubHeaders(token);
 
 
-    /* =====================================================
-       1. REPOSITORY PRÜFEN
-    ===================================================== */
+    /* Repository prüfen */
 
-    const repoResponse =
-      await fetch(
-        `https://api.github.com/repos/${repo}`,
-        {
-          method: 'GET',
-          headers
-        }
-      );
+    const repoResponse = await fetch(
+      `https://api.github.com/repos/${repo}`,
+      {
+        method: 'GET',
+        headers
+      }
+    );
 
 
     const repoData =
-      await repoResponse
-        .json()
-        .catch(
-          () => ({})
-        );
+      await repoResponse.json().catch(() => ({}));
 
 
-    if (!repoResponse.ok) {
+    if(!repoResponse.ok){
 
-      if (repoResponse.status === 401) {
-
+      if(repoResponse.status === 401){
         throw new Error(
           'Token ungültig oder abgelaufen.'
         );
-
       }
 
 
-      if (repoResponse.status === 403) {
-
+      if(repoResponse.status === 403){
         throw new Error(
           'GitHub verweigert diesem Token den Zugriff auf das Repository.'
         );
-
       }
 
 
-      if (repoResponse.status === 404) {
-
+      if(repoResponse.status === 404){
         throw new Error(
           `Repository "${repo}" wurde nicht gefunden oder der Token hat keinen Zugriff darauf.`
         );
-
       }
 
 
@@ -333,104 +234,72 @@ async function testGitHubToken() {
         repoData.message ||
         `GitHub Fehler ${repoResponse.status}`
       );
-
     }
 
 
-    /* =====================================================
-       2. SCHREIBRECHT PRÜFEN
-    ===================================================== */
+    /* Schreibrecht prüfen */
 
-    if (
+    if(
       repoData.permissions &&
       repoData.permissions.push === false
-    ) {
-
+    ){
       throw new Error(
         'Der Token kann das Repository lesen, besitzt aber kein Schreibrecht. Bei GitHub muss Contents auf "Read and write" stehen.'
       );
-
     }
 
 
-    /* =====================================================
-       3. PICKS.JSON PRÜFEN
-    ===================================================== */
+    /* picks.json prüfen */
 
-    const fileResponse =
-      await fetch(
-
-        `https://api.github.com/repos/${repo}/contents/picks.json?ref=${encodeURIComponent(branch)}`,
-
-        {
-          method: 'GET',
-          headers
-        }
-
-      );
+    const fileResponse = await fetch(
+      `https://api.github.com/repos/${repo}/contents/picks.json?ref=${encodeURIComponent(branch)}`,
+      {
+        method: 'GET',
+        headers
+      }
+    );
 
 
     const fileData =
-      await fileResponse
-        .json()
-        .catch(
-          () => ({})
-        );
+      await fileResponse.json().catch(() => ({}));
 
 
-    if (fileResponse.ok) {
+    if(fileResponse.ok){
 
-      if (status) {
-
+      if(status){
         status.textContent =
           `✓ Alles okay. Repository, Branch "${branch}" und picks.json sind erreichbar.`;
 
         status.className =
           'github-status ok';
-
       }
 
-    }
+    }else if(fileResponse.status === 404){
 
-    else if (
-      fileResponse.status === 404
-    ) {
-
-      if (status) {
-
+      if(status){
         status.textContent =
           `✓ Token funktioniert. Repository "${repo}" ist erreichbar. picks.json wird beim ersten Upload erstellt.`;
 
         status.className =
           'github-status ok';
-
       }
 
-    }
-
-    else if (
-      fileResponse.status === 403
-    ) {
+    }else if(fileResponse.status === 403){
 
       throw new Error(
         'GitHub verweigert den Zugriff auf picks.json. Prüfe beim Fine-grained Token den Repository-Zugriff und Contents → Read and write.'
       );
 
-    }
-
-    else {
+    }else{
 
       throw new Error(
         fileData.message ||
         `GitHub Fehler ${fileResponse.status}`
       );
-
     }
 
 
-  }
-
-  catch (error) {
+  }catch(error){
 
     console.error(
       'GitHub Token Test:',
@@ -438,39 +307,30 @@ async function testGitHubToken() {
     );
 
 
-    if (status) {
-
+    if(status){
       status.textContent =
         `❌ ${error.message}`;
 
       status.className =
         'github-status error';
-
     }
 
-  }
 
-  finally {
+  }finally{
 
-    if (btn) {
-
+    if(btn){
       btn.disabled = false;
-
-      btn.textContent =
-        '🧪 Token prüfen';
-
+      btn.textContent = '🧪 Token prüfen';
     }
-
   }
-
 }
 
 
 /* =========================================================
-   PICKS ZU GITHUB SENDEN
-========================================================= */
+   GITHUB PUBLISH
+   ========================================================= */
 
-async function publishPicksToGitHub() {
+async function publishPicksToGitHub(){
 
   const token =
     $('#ghToken')?.value.trim();
@@ -488,177 +348,114 @@ async function publishPicksToGitHub() {
     $('#ghStatus');
 
 
-  /* =====================================================
-     EINGABEN PRÜFEN
-  ===================================================== */
-
-  if (!token) {
+  if(!token){
 
     showToast(
       'GitHub Token fehlt'
     );
 
-    if (status) {
-
+    if(status){
       status.textContent =
         '❌ Bitte zuerst den GitHub-Token eintragen.';
 
       status.className =
         'github-status error';
-
     }
 
     return;
-
   }
 
 
-  if (
-    !repo ||
-    !repo.includes('/')
-  ) {
+  if(!repo || !repo.includes('/')){
 
     showToast(
       'Repository fehlt'
     );
 
-    if (status) {
-
+    if(status){
       status.textContent =
         '❌ Repository muss z.B. bodycam1212-lab/axenvo-bet sein.';
 
       status.className =
         'github-status error';
-
     }
 
     return;
-
   }
 
 
-  if (btn) {
-
+  if(btn){
     btn.disabled = true;
-
-    btn.textContent =
-      'Wird veröffentlicht …';
-
+    btn.textContent = 'Wird veröffentlicht …';
   }
 
 
-  if (status) {
-
+  if(status){
     status.textContent =
       'Picks werden zu GitHub gesendet …';
 
     status.className =
       'github-status loading';
-
   }
 
 
-  try {
+  try{
 
     const headers =
       getGitHubHeaders(token);
-
 
     const api =
       `https://api.github.com/repos/${repo}/contents/picks.json`;
 
 
-    /* =====================================================
-       AKTUELLE DATEI HOLEN
-    ===================================================== */
+    /* Aktuelle Datei holen */
 
-    const currentResponse =
-      await fetch(
-
-        `${api}?ref=${encodeURIComponent(branch)}`,
-
-        {
-          method: 'GET',
-          headers
-        }
-
-      );
+    const currentResponse = await fetch(
+      `${api}?ref=${encodeURIComponent(branch)}`,
+      {
+        method: 'GET',
+        headers
+      }
+    );
 
 
     const currentData =
-      await currentResponse
-        .json()
-        .catch(
-          () => ({})
-        );
-
+      await currentResponse.json().catch(() => ({}));
 
     let sha = null;
 
 
-    /* Datei existiert */
+    if(currentResponse.ok){
 
-    if (
-      currentResponse.ok
-    ) {
+      sha = currentData.sha;
 
-      sha =
-        currentData.sha;
-
-    }
-
-
-    /* Datei existiert noch nicht */
-
-    else if (
-      currentResponse.status === 404
-    ) {
+    }else if(currentResponse.status === 404){
 
       sha = null;
 
-    }
-
-
-    /* Token ungültig */
-
-    else if (
-      currentResponse.status === 401
-    ) {
+    }else if(currentResponse.status === 401){
 
       throw new Error(
         'Token ungültig oder abgelaufen.'
       );
 
-    }
-
-
-    /* Zugriff verweigert */
-
-    else if (
-      currentResponse.status === 403
-    ) {
+    }else if(currentResponse.status === 403){
 
       throw new Error(
         currentData.message ||
         'GitHub verweigert den Zugriff. Prüfe Repository Access und Contents → Read and write.'
       );
 
-    }
-
-
-    else {
+    }else{
 
       throw new Error(
         currentData.message ||
         `GitHub Fehler ${currentResponse.status}`
       );
-
     }
 
 
-    /* =====================================================
-       PICKS VORBEREITEN
-    ===================================================== */
+    /* Picks vorbereiten */
 
     const content =
       JSON.stringify(
@@ -671,76 +468,38 @@ async function publishPicksToGitHub() {
 
 
     const encodedContent =
-      utf8ToBase64(
-        content
-      );
+      utf8ToBase64(content);
 
-
-    /* =====================================================
-       COMMIT BODY
-    ===================================================== */
 
     const body = {
-
-      message:
-        'Update WINTIQ picks',
-
-      content:
-        encodedContent,
-
-      branch:
-        branch
-
+      message: 'Update WINTIQ picks',
+      content: encodedContent,
+      branch: branch
     };
 
 
-    /*
-     * Wenn picks.json schon existiert,
-     * benötigt GitHub die SHA.
-     */
-
-    if (sha) {
-
-      body.sha =
-        sha;
-
+    if(sha){
+      body.sha = sha;
     }
 
 
-    /* =====================================================
-       GITHUB PUT
-    ===================================================== */
+    /* Datei zu GitHub senden */
 
-    const response =
-      await fetch(
-
-        api,
-
-        {
-          method: 'PUT',
-
-          headers,
-
-          body:
-            JSON.stringify(body)
-        }
-
-      );
+    const response = await fetch(
+      api,
+      {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(body)
+      }
+    );
 
 
     const result =
-      await response
-        .json()
-        .catch(
-          () => ({})
-        );
+      await response.json().catch(() => ({}));
 
 
-    /* =====================================================
-       FEHLER
-    ===================================================== */
-
-    if (!response.ok) {
+    if(!response.ok){
 
       console.error(
         'GitHub API Fehler:',
@@ -748,49 +507,37 @@ async function publishPicksToGitHub() {
       );
 
 
-      if (
-        response.status === 401
-      ) {
+      if(response.status === 401){
 
         throw new Error(
           'GitHub akzeptiert den Token nicht. Bitte einen neuen Token verwenden.'
         );
-
       }
 
 
-      if (
-        response.status === 403
-      ) {
+      if(response.status === 403){
 
         throw new Error(
           result.message ||
           'GitHub verweigert das Schreiben. Prüfe beim Fine-grained Token: Repository access = axenvo-bet und Contents = Read and write.'
         );
-
       }
 
 
-      if (
-        response.status === 409
-      ) {
+      if(response.status === 409){
 
         throw new Error(
           'GitHub meldet einen Versionskonflikt. Seite neu laden und erneut versuchen.'
         );
-
       }
 
 
-      if (
-        response.status === 422
-      ) {
+      if(response.status === 422){
 
         throw new Error(
           result.message ||
           'GitHub konnte die Datei nicht speichern. Prüfe Repository und Branch.'
         );
-
       }
 
 
@@ -798,25 +545,21 @@ async function publishPicksToGitHub() {
         result.message ||
         `GitHub Fehler ${response.status}`
       );
-
     }
 
 
-    /* =====================================================
-       ERFOLG
-    ===================================================== */
+    /* Token nach erfolgreichem Upload löschen */
 
     $('#ghToken').value = '';
 
 
-    if (status) {
+    if(status){
 
       status.textContent =
         `✓ Erfolgreich veröffentlicht: picks.json → ${repo} → ${branch}`;
 
       status.className =
         'github-status ok';
-
     }
 
 
@@ -825,10 +568,7 @@ async function publishPicksToGitHub() {
     );
 
 
-    /*
-     * Kurz danach versuchen wir die veröffentlichte
-     * Datei erneut zu laden.
-     */
+    /* Seite kurz später aktualisieren */
 
     setTimeout(
       loadPublishedPicks,
@@ -836,9 +576,7 @@ async function publishPicksToGitHub() {
     );
 
 
-  }
-
-  catch (error) {
+  }catch(error){
 
     console.error(
       'GitHub Veröffentlichung fehlgeschlagen:',
@@ -846,14 +584,13 @@ async function publishPicksToGitHub() {
     );
 
 
-    if (status) {
+    if(status){
 
       status.textContent =
         `❌ ${error.message}`;
 
       status.className =
         'github-status error';
-
     }
 
 
@@ -861,48 +598,40 @@ async function publishPicksToGitHub() {
       `Fehler: ${error.message}`
     );
 
-  }
 
+  }finally{
 
-  finally {
-
-    if (btn) {
+    if(btn){
 
       btn.disabled = false;
 
       btn.textContent =
         'Picks zu GitHub senden';
-
     }
-
   }
-
 }
 
 
 /* =========================================================
    PUBLISHED PICKS LADEN
-========================================================= */
+   ========================================================= */
 
-async function loadPublishedPicks() {
+async function loadPublishedPicks(){
 
-  try {
+  try{
 
-    const r =
-      await fetch(
-        `picks.json?ts=${Date.now()}`,
-        {
-          cache: 'no-store'
-        }
-      );
+    const r = await fetch(
+      `picks.json?ts=${Date.now()}`,
+      {
+        cache: 'no-store'
+      }
+    );
 
 
-    if (!r.ok) {
-
+    if(!r.ok){
       throw new Error(
         'picks.json nicht gefunden'
       );
-
     }
 
 
@@ -910,11 +639,7 @@ async function loadPublishedPicks() {
       await r.json();
 
 
-    if (
-      Array.isArray(
-        data.picks
-      )
-    ) {
+    if(Array.isArray(data.picks)){
 
       state.picks =
         data.picks;
@@ -922,33 +647,36 @@ async function loadPublishedPicks() {
       saveState();
 
       renderPicks();
-
     }
 
-  }
 
-  catch (e) {
+  }catch(e){
 
     console.warn(
       'Konnte veröffentlichte Picks nicht laden:',
       e
     );
-
   }
-
 }
 
 
 /* =========================================================
    LOGIN
-========================================================= */
+   ========================================================= */
 
-function login() {
+function login(){
 
-  if (
-    $('#loginUser').value === DEMO_USER &&
-    $('#loginPass').value === DEMO_PASS
-  ) {
+  const user =
+    $('#loginUser')?.value || '';
+
+  const pass =
+    $('#loginPass')?.value || '';
+
+
+  if(
+    user === DEMO_USER &&
+    pass === DEMO_PASS
+  ){
 
     sessionStorage.setItem(
       'wintiq_auth',
@@ -956,108 +684,109 @@ function login() {
     );
 
 
-    $('#loginGate')
-      .classList
-      .add('hidden');
+    $('#loginGate')?.classList.add(
+      'hidden'
+    );
 
+    $('#app')?.classList.remove(
+      'app-hidden'
+    );
 
-    $('#app')
-      .classList
-      .remove('app-hidden');
-
-
-    document.body
-      .classList
-      .remove('locked');
+    document.body.classList.remove(
+      'locked'
+    );
 
 
     applyState();
 
+
+  }else{
+
+    if($('#loginError')){
+
+      $('#loginError').textContent =
+        'Zugangsdaten nicht korrekt.';
+    }
   }
-
-  else {
-
-    $('#loginError')
-      .textContent =
-      'Zugangsdaten nicht korrekt.';
-
-  }
-
 }
 
 
-function lock() {
+/* Login-Formular */
 
-  sessionStorage.removeItem(
-    'wintiq_auth'
-  );
+if($('#loginForm')){
 
-  location.reload();
-
-}
-
-
-$('#loginForm')
-  .addEventListener(
+  $('#loginForm').addEventListener(
     'submit',
     e => {
 
       e.preventDefault();
 
       login();
-
     }
   );
-
-
-if (
-  sessionStorage.getItem(
-    'wintiq_auth'
-  ) === '1'
-) {
-
-  $('#loginGate')
-    .classList
-    .add('hidden');
-
-
-  $('#app')
-    .classList
-    .remove('app-hidden');
-
-
-  document.body
-    .classList
-    .remove('locked');
-
 }
 
 
-$('#logout').onclick =
-  lock;
+/* Bereits eingeloggt? */
+
+if(
+  sessionStorage.getItem(
+    'wintiq_auth'
+  ) === '1'
+){
+
+  $('#loginGate')?.classList.add(
+    'hidden'
+  );
+
+  $('#app')?.classList.remove(
+    'app-hidden'
+  );
+
+  document.body.classList.remove(
+    'locked'
+  );
+}
+
+
+/* =========================================================
+   LOGOUT
+   ========================================================= */
+
+function lock(){
+
+  sessionStorage.removeItem(
+    'wintiq_auth'
+  );
+
+  location.reload();
+}
+
+
+if($('#logout')){
+
+  $('#logout').onclick = lock;
+}
 
 
 /* =========================================================
    COUNTDOWN
-========================================================= */
+   ========================================================= */
 
-function pad(n) {
+function pad(n){
 
-  return String(n)
-    .padStart(
-      2,
-      '0'
-    );
-
+  return String(n).padStart(
+    2,
+    '0'
+  );
 }
 
 
-function updateCountdown() {
+function updateCountdown(){
 
   const release =
     new Date(
-      state.release +
-      'T00:00:00'
+      state.release + 'T00:00:00'
     );
 
 
@@ -1092,13 +821,18 @@ function updateCountdown() {
     );
 
 
-  $('#timer').textContent =
-    `${pad(da)} : ${pad(h)} : ${pad(m)} : ${pad(s)}`;
+  if($('#timer')){
+
+    $('#timer').textContent =
+      `${pad(da)} : ${pad(h)} : ${pad(m)} : ${pad(s)}`;
+  }
 
 
-  $('#days').textContent =
-    `${pad(da)} DAYS`;
+  if($('#days')){
 
+    $('#days').textContent =
+      `${pad(da)} DAYS`;
+  }
 }
 
 
@@ -1110,36 +844,24 @@ setInterval(
 
 /* =========================================================
    MATCHES
-========================================================= */
+   ========================================================= */
 
-function renderMatches() {
+function renderMatches(){
 
   const data = [
 
     {
       sport: 'football',
       league: 'UEFA · DEMO',
-      time: "● LIVE 68'",
+      time: '● LIVE 68\'',
       a: 'FC Bayern',
       b: 'Dortmund',
       score: '2 : 1',
 
       odds: [
-        [
-          '1',
-          '1.78',
-          'FC Bayern — Sieg'
-        ],
-        [
-          'X',
-          '3.90',
-          'Remis'
-        ],
-        [
-          '2',
-          '4.40',
-          'Dortmund — Sieg'
-        ]
+        ['1','1.78','FC Bayern — Sieg'],
+        ['X','3.90','Remis'],
+        ['2','4.40','Dortmund — Sieg']
       ]
     },
 
@@ -1147,27 +869,15 @@ function renderMatches() {
     {
       sport: 'football',
       league: 'LA LIGA · DEMO',
-      time: "● LIVE 31'",
+      time: '● LIVE 31\'',
       a: 'Real Madrid',
       b: 'Barcelona',
       score: '0 : 0',
 
       odds: [
-        [
-          '1',
-          '2.10',
-          'Real Madrid — Sieg'
-        ],
-        [
-          'X',
-          '3.70',
-          'Real Madrid — Remis'
-        ],
-        [
-          '2',
-          '3.05',
-          'Barcelona — Sieg'
-        ]
+        ['1','2.10','Real Madrid — Sieg'],
+        ['X','3.70','Real Madrid — Remis'],
+        ['2','3.05','Barcelona — Sieg']
       ]
     },
 
@@ -1181,16 +891,8 @@ function renderMatches() {
       score: 'VS',
 
       odds: [
-        [
-          'A',
-          '1.85',
-          'Spieler A — Sieg'
-        ],
-        [
-          'B',
-          '1.95',
-          'Spieler B — Sieg'
-        ]
+        ['A','1.85','Spieler A — Sieg'],
+        ['B','1.95','Spieler B — Sieg']
       ]
     },
 
@@ -1204,201 +906,161 @@ function renderMatches() {
       score: 'VS',
 
       odds: [
-        [
-          '1',
-          '1.92',
-          'Lakers — Sieg'
-        ],
-        [
-          '2',
-          '1.88',
-          'Celtics — Sieg'
-        ]
+        ['1','1.92','Lakers — Sieg'],
+        ['2','1.88','Celtics — Sieg']
       ]
     }
 
   ];
 
 
+  if(!$('#matches')) return;
+
+
   $('#matches').innerHTML =
+    data.map(m => `
 
-    data.map(
+      <article
+        class="match"
+        data-sport="${m.sport}"
+      >
 
-      m => `
+        <div class="match-top">
 
-        <article
-          class="match"
-          data-sport="${m.sport}"
+          <span>
+            ${m.league}
+          </span>
+
+          <b>
+            ${m.time}
+          </b>
+
+        </div>
+
+
+        <div class="teams">
+
+          <strong>
+
+            <i>
+              ${m.a.slice(0,3).toUpperCase()}
+            </i>
+
+            ${m.a}
+
+          </strong>
+
+
+          <div>
+
+            ${m.score.replace(
+              ':',
+              '<span>:</span>'
+            )}
+
+          </div>
+
+
+          <strong>
+
+            ${m.b}
+
+            <i class="lime">
+              ${m.b.slice(0,3).toUpperCase()}
+            </i>
+
+          </strong>
+
+        </div>
+
+
+        <div
+          class="odds ${m.odds.length === 2 ? 'two' : ''}"
         >
 
-          <div class="match-top">
+          ${m.odds.map(o => `
 
-            <span>
-              ${m.league}
-            </span>
+            <button
+              data-bet="${o[2]}"
+              data-odd="${o[1]}"
+            >
 
-            <b>
-              ${m.time}
-            </b>
+              <span>
+                ${o[0]}
+              </span>
 
-          </div>
+              <b>
+                ${o[1]}
+              </b>
 
+            </button>
 
-          <div class="teams">
+          `).join('')}
 
-            <strong>
+        </div>
 
-              <i>
-                ${m.a
-                  .slice(0,3)
-                  .toUpperCase()}
-              </i>
+      </article>
 
-              ${m.a}
-
-            </strong>
+    `).join('');
 
 
-            <div>
-
-              ${m.score.replace(
-                ':',
-                '<span>:</span>'
-              )}
-
-            </div>
-
-
-            <strong>
-
-              ${m.b}
-
-              <i class="lime">
-
-                ${m.b
-                  .slice(0,3)
-                  .toUpperCase()}
-
-              </i>
-
-            </strong>
-
-          </div>
-
-
-          <div
-            class="odds ${
-              m.odds.length === 2
-                ? 'two'
-                : ''
-            }"
-          >
-
-            ${m.odds.map(
-
-              o => `
-
-                <button
-                  data-bet="${o[2]}"
-                  data-odd="${o[1]}"
-                >
-
-                  <span>
-                    ${o[0]}
-                  </span>
-
-                  <b>
-                    ${o[1]}
-                  </b>
-
-                </button>
-
-              `
-
-            ).join('')}
-
-          </div>
-
-        </article>
-
-      `
-
-    ).join('');
-
+  /* Quote Buttons */
 
   document
-    .querySelectorAll(
-      '.odds button'
-    )
-    .forEach(
+    .querySelectorAll('.odds button')
+    .forEach(b => {
 
-      b => {
+      b.onclick = () => {
 
-        b.onclick = () => {
-
-          const i =
-            slip.findIndex(
-              x =>
-                x.bet ===
-                b.dataset.bet
-            );
-
-
-          if (i >= 0) {
-
-            slip.splice(
-              i,
-              1
-            );
-
-          }
-
-          else {
-
-            slip.push({
-
-              bet:
-                b.dataset.bet,
-
-              odd:
-                b.dataset.odd
-
-            });
-
-          }
-
-
-          renderSlip();
-
-
-          showToast(
-
-            i >= 0
-              ? 'Demo-Tipp entfernt'
-              : 'Demo-Quote hinzugefügt ✓'
-
+        const i =
+          slip.findIndex(
+            x => x.bet === b.dataset.bet
           );
 
-        };
 
-      }
+        if(i >= 0){
 
-    );
+          slip.splice(
+            i,
+            1
+          );
 
+        }else{
+
+          slip.push({
+            bet: b.dataset.bet,
+            odd: b.dataset.odd
+          });
+        }
+
+
+        renderSlip();
+
+
+        showToast(
+          i >= 0
+            ? 'Demo-Tipp entfernt'
+            : 'Demo-Quote hinzugefügt ✓'
+        );
+      };
+    });
 }
 
 
 /* =========================================================
-   SLIP
-========================================================= */
+   BET SLIP
+   ========================================================= */
 
-function renderSlip() {
+function renderSlip(){
 
   const box =
     $('#items');
 
 
-  if (!slip.length) {
+  if(!box) return;
+
+
+  if(!slip.length){
 
     box.innerHTML = `
 
@@ -1420,187 +1082,185 @@ function renderSlip() {
     `;
 
 
-    $('#total')
-      .textContent =
-      '—';
-
+    if($('#total')){
+      $('#total').textContent = '—';
+    }
 
     return;
-
   }
 
 
   box.innerHTML =
+    slip.map((x,i) => `
 
-    slip.map(
+      <div class="slip-item">
 
-      (x,i) => `
+        <div>
 
-        <div class="slip-item">
+          <strong>
+            ${x.bet}
+          </strong>
 
-          <div>
-
-            <strong>
-              ${x.bet}
-            </strong>
-
-            <span>
-              Demo-Markt · Quote ${x.odd}
-            </span>
-
-          </div>
-
-          <button
-            data-i="${i}"
-          >
-            ×
-          </button>
+          <span>
+            Demo-Markt · Quote ${x.odd}
+          </span>
 
         </div>
 
-      `
 
-    ).join('');
+        <button
+          data-i="${i}"
+        >
+          ×
+        </button>
+
+      </div>
+
+    `).join('');
 
 
-  $('#total').textContent =
+  if($('#total')){
 
-    slip
-      .reduce(
-        (a,x) =>
-          a * Number(x.odd),
-        1
-      )
-      .toFixed(2);
+    $('#total').textContent =
+      slip
+        .reduce(
+          (a,x) => a * Number(x.odd),
+          1
+        )
+        .toFixed(2);
+  }
 
 
   document
-    .querySelectorAll(
-      '.slip-item button'
-    )
-    .forEach(
+    .querySelectorAll('.slip-item button')
+    .forEach(b => {
 
-      b => {
+      b.onclick = () => {
 
-        b.onclick = () => {
+        slip.splice(
+          Number(b.dataset.i),
+          1
+        );
 
-          slip.splice(
-            Number(
-              b.dataset.i
-            ),
-            1
-          );
-
-          renderSlip();
-
-        };
-
-      }
-
-    );
-
+        renderSlip();
+      };
+    });
 }
 
 
-$('#clear').onclick = () => {
+/* Slip leeren */
 
-  slip = [];
+if($('#clear')){
 
-  renderSlip();
+  $('#clear').onclick = () => {
 
-};
+    slip = [];
+
+    renderSlip();
+  };
+}
 
 
-$('#place').onclick = () => {
+/* Demo-Wette */
 
-  showToast(
-    'Nur Demo: kein Echtgeld und keine echte Wette.'
-  );
+if($('#place')){
 
-};
+  $('#place').onclick = () => {
+
+    showToast(
+      'Nur Demo: kein Echtgeld und keine echte Wette.'
+    );
+  };
+}
 
 
 /* =========================================================
    PICKS
-========================================================= */
+   ========================================================= */
 
-function renderPicks() {
+function renderPicks(){
 
-  $('#pickGrid').innerHTML =
-
-    state.picks.map(
-
-      (p,i) => `
-
-        <article class="pick">
-
-          <div class="pick-top">
-
-            <span>
-              ${p.tag}
-            </span>
-
-            <small>
-              ${p.sport}
-            </small>
-
-          </div>
+  const grid =
+    $('#pickGrid');
 
 
-          <h3>
-            ${p.match}
-          </h3>
+  if(!grid) return;
 
 
-          <div class="pick-tip">
+  grid.innerHTML =
+    state.picks.map((p,i) => `
 
-            <small>
-              WINTIQ PICK
-            </small>
+      <article class="pick">
 
-            <strong>
-              ${p.tip}
-            </strong>
+        <div class="pick-top">
 
-            <b>
-              ${p.odd}
-            </b>
+          <span>
+            ${p.tag}
+          </span>
 
-          </div>
+          <small>
+            ${p.sport}
+          </small>
 
-
-          <p>
-            ${p.reason}
-          </p>
+        </div>
 
 
-          <footer>
+        <h3>
+          ${p.match}
+        </h3>
 
-            <span>
-              Redaktionell
-            </span>
 
-            <button
-              onclick="addPickToSlip(${i})"
-            >
-              Demo-Tipp +
-            </button>
+        <div class="pick-tip">
 
-          </footer>
+          <small>
+            WINTIQ PICK
+          </small>
 
-        </article>
+          <strong>
+            ${p.tip}
+          </strong>
 
-      `
+          <b>
+            ${p.odd}
+          </b>
 
-    ).join('');
+        </div>
 
+
+        <p>
+          ${p.reason}
+        </p>
+
+
+        <footer>
+
+          <span>
+            Redaktionell
+          </span>
+
+          <button
+            onclick="addPickToSlip(${i})"
+          >
+            Demo-Tipp +
+          </button>
+
+        </footer>
+
+      </article>
+
+    `).join('');
 }
 
+
+/* Pick in Slip */
 
 window.addPickToSlip = i => {
 
   const p =
     state.picks[i];
+
+
+  if(!p) return;
 
 
   slip.push({
@@ -1620,47 +1280,48 @@ window.addPickToSlip = i => {
   showToast(
     'WINTIQ Pick im Demo-Slip ✓'
   );
-
 };
 
 
 /* =========================================================
-   STATE ANWENDEN
-========================================================= */
+   STATE AUF SEITE ANWENDEN
+   ========================================================= */
 
-function applyState() {
+function applyState(){
 
   const title =
     state.heroTitle.split('\n');
 
 
-  $('#heroTitle').innerHTML =
+  if($('#heroTitle')){
 
-    title
-      .map(
-
-        (x,i) =>
-
-          i === 1
-            ? `<span>${x}</span>`
-            : x
-
-      )
-      .join('<br>');
-
-
-  $('#heroText').textContent =
-    state.heroText;
+    $('#heroTitle').innerHTML =
+      title
+        .map(
+          (x,i) =>
+            i === 1
+              ? `<span>${x}</span>`
+              : x
+        )
+        .join('<br>');
+  }
 
 
-  $('#pulseText').textContent =
-    state.pulse;
+  if($('#heroText')){
+    $('#heroText').textContent =
+      state.heroText;
+  }
+
+
+  if($('#pulseText')){
+    $('#pulseText').textContent =
+      state.pulse;
+  }
 
 
   const date =
     new Date(
-      state.release +
-      'T00:00:00'
+      state.release + 'T00:00:00'
     );
 
 
@@ -1674,33 +1335,35 @@ function applyState() {
     fmt.format(date);
 
 
-  $('#releaseDateBig')
-    .textContent =
-    nice;
+  if($('#releaseDateBig')){
+    $('#releaseDateBig').textContent =
+      nice;
+  }
 
 
-  $('#releaseMeta')
-    .textContent =
-    nice;
+  if($('#releaseMeta')){
+    $('#releaseMeta').textContent =
+      nice;
+  }
 
 
   updateCountdown();
-
   renderMatches();
-
   renderPicks();
-
 }
 
 
 /* =========================================================
    ADMIN
-========================================================= */
+   ========================================================= */
 
-function openAdmin() {
+function openAdmin(){
 
   const a =
     $('#adminPanel');
+
+
+  if(!a) return;
 
 
   a.classList.remove(
@@ -1724,406 +1387,372 @@ function openAdmin() {
     state.pulse;
 
 
-  /*
-   * GitHub-Felder automatisch
-   * auf dein Repository setzen.
-   */
+  if(
+    $('#ghRepo') &&
+    !$('#ghRepo').value.trim()
+  ){
 
-  if ($('#ghRepo')) {
-
-    if (
-      !$('#ghRepo').value.trim()
-    ) {
-
-      $('#ghRepo').value =
-        'bodycam1212-lab/axenvo-bet';
-
-    }
-
+    $('#ghRepo').value =
+      'bodycam1212-lab/axenvo-bet';
   }
 
 
-  if ($('#ghBranch')) {
+  if(
+    $('#ghBranch') &&
+    !$('#ghBranch').value.trim()
+  ){
 
-    if (
-      !$('#ghBranch').value.trim()
-    ) {
-
-      $('#ghBranch').value =
-        'main';
-
-    }
-
+    $('#ghBranch').value =
+      'main';
   }
 
 
-  if ($('#ghStatus')) {
+  if($('#ghStatus')){
 
-    $('#ghStatus').textContent =
-      '';
+    $('#ghStatus').textContent = '';
 
     $('#ghStatus').className =
       'github-status';
-
   }
 
 
   renderAdminPicks();
-
 }
 
 
-function renderAdminPicks() {
+/* Admin Picks */
 
-  $('#adminPicks').innerHTML =
+function renderAdminPicks(){
 
-    state.picks.map(
+  const box =
+    $('#adminPicks');
 
-      (p,i) => `
 
-        <div class="admin-pick">
+  if(!box) return;
 
-          <input
-            data-k="sport"
-            data-i="${i}"
-            value="${p.sport || ''}"
-            placeholder="Sport"
-          >
 
-          <input
-            data-k="match"
-            data-i="${i}"
-            value="${p.match || ''}"
-            placeholder="Match"
-          >
+  box.innerHTML =
+    state.picks.map((p,i) => `
 
-          <input
-            data-k="tip"
-            data-i="${i}"
-            value="${p.tip || ''}"
-            placeholder="Tipp"
-          >
+      <div class="admin-pick">
 
-          <input
-            data-k="odd"
-            data-i="${i}"
-            value="${p.odd || ''}"
-            placeholder="Quote"
-          >
+        <input
+          data-k="sport"
+          data-i="${i}"
+          value="${p.sport || ''}"
+          placeholder="Sport"
+        >
 
-          <button
-            data-remove="${i}"
-            type="button"
-          >
-            ×
-          </button>
+        <input
+          data-k="match"
+          data-i="${i}"
+          value="${p.match || ''}"
+          placeholder="Match"
+        >
 
-        </div>
+        <input
+          data-k="tip"
+          data-i="${i}"
+          value="${p.tip || ''}"
+          placeholder="Tipp"
+        >
 
-      `
+        <input
+          data-k="odd"
+          data-i="${i}"
+          value="${p.odd || ''}"
+          placeholder="Quote"
+        >
 
-    ).join('');
+        <button
+          data-remove="${i}"
+          type="button"
+        >
+          ×
+        </button>
+
+      </div>
+
+    `).join('');
 
 
   document
-    .querySelectorAll(
-      '[data-remove]'
-    )
-    .forEach(
+    .querySelectorAll('[data-remove]')
+    .forEach(b => {
 
-      b => {
+      b.onclick = () => {
 
-        b.onclick = () => {
+        state.picks.splice(
+          Number(b.dataset.remove),
+          1
+        );
 
-          state.picks.splice(
-            Number(
-              b.dataset.remove
-            ),
-            1
-          );
-
-          renderAdminPicks();
-
-        };
-
-      }
-
-    );
-
+        renderAdminPicks();
+      };
+    });
 }
 
 
-$('#adminOpen')
-  .onclick =
-  openAdmin;
+/* Admin öffnen */
+
+if($('#adminOpen')){
+
+  $('#adminOpen').onclick =
+    openAdmin;
+}
 
 
-$('#adminClose')
-  .onclick = () => {
+/* Admin schließen */
+
+if($('#adminClose')){
+
+  $('#adminClose').onclick = () => {
 
     $('#adminPanel')
-      .classList
+      ?.classList
       .add('hidden');
-
   };
+}
 
 
-$('#addPick').onclick = () => {
+/* Pick hinzufügen */
 
-  state.picks.push({
+if($('#addPick')){
 
-    sport:
-      'FUSSBALL',
+  $('#addPick').onclick = () => {
 
-    match:
-      'Neues Match',
+    state.picks.push({
 
-    tip:
-      'Dein Tipp',
+      sport: 'FUSSBALL',
 
-    reason:
-      'Eigene redaktionelle Einschätzung.',
+      match: 'Neues Match',
 
-    tag:
-      'NEW',
+      tip: 'Dein Tipp',
 
-    odd:
-      '2.00'
+      reason:
+        'Eigene redaktionelle Einschätzung.',
 
-  });
+      tag: 'NEW',
+
+      odd: '2.00'
+    });
 
 
-  renderAdminPicks();
-
-};
-
-
-$('#saveAdmin').onclick = () => {
-
-  state.heroTitle =
-    $('#aHeroTitle').value ||
-    DEFAULTS.heroTitle;
+    renderAdminPicks();
+  };
+}
 
 
-  state.heroText =
-    $('#aHeroText').value ||
-    DEFAULTS.heroText;
+/* =========================================================
+   ADMIN SPEICHERN
+   ========================================================= */
+
+if($('#saveAdmin')){
+
+  $('#saveAdmin').onclick = () => {
+
+    state.heroTitle =
+      $('#aHeroTitle').value ||
+      DEFAULTS.heroTitle;
 
 
-  state.release =
-    $('#aRelease').value ||
-    DEFAULTS.release;
+    state.heroText =
+      $('#aHeroText').value ||
+      DEFAULTS.heroText;
 
 
-  state.pulse =
-    $('#aPulse').value ||
-    DEFAULTS.pulse;
+    state.release =
+      $('#aRelease').value ||
+      DEFAULTS.release;
 
 
-  document
-    .querySelectorAll(
-      '#adminPicks [data-k]'
-    )
-    .forEach(
+    state.pulse =
+      $('#aPulse').value ||
+      DEFAULTS.pulse;
 
-      i => {
+
+    document
+      .querySelectorAll(
+        '#adminPicks [data-k]'
+      )
+      .forEach(i => {
 
         const index =
-          Number(
-            i.dataset.i
-          );
+          Number(i.dataset.i);
 
         const key =
           i.dataset.k;
 
 
-        if (
-          state.picks[index]
-        ) {
+        if(state.picks[index]){
 
           state.picks[index][key] =
             i.value;
-
         }
+      });
 
-      }
 
+    saveState();
+
+    applyState();
+
+
+    $('#adminPanel')
+      ?.classList
+      .add('hidden');
+
+
+    showToast(
+      'Admin-Änderungen gespeichert ✓'
     );
-
-
-  saveState();
-
-  applyState();
-
-
-  $('#adminPanel')
-    .classList
-    .add('hidden');
-
-
-  showToast(
-    'Admin-Änderungen gespeichert ✓'
-  );
-
-};
+  };
+}
 
 
 /* =========================================================
    GITHUB BUTTONS
-========================================================= */
+   ========================================================= */
 
-$('#publishGitHub')
-  .onclick =
-  publishPicksToGitHub;
+if($('#publishGitHub')){
+
+  $('#publishGitHub').onclick =
+    publishPicksToGitHub;
+}
 
 
-$('#testGitHub')
-  .onclick =
-  testGitHubToken;
+if($('#testGitHub')){
+
+  $('#testGitHub').onclick =
+    testGitHubToken;
+}
 
 
 /* =========================================================
-   RESET
-========================================================= */
+   ADMIN RESET
+   ========================================================= */
 
-$('#resetAdmin').onclick = () => {
+if($('#resetAdmin')){
 
-  state =
-    structuredClone(
-      DEFAULTS
+  $('#resetAdmin').onclick = () => {
+
+    state =
+      structuredClone(
+        DEFAULTS
+      );
+
+
+    saveState();
+
+    applyState();
+
+    openAdmin();
+
+
+    showToast(
+      'Demo zurückgesetzt'
     );
-
-
-  saveState();
-
-  applyState();
-
-  openAdmin();
-
-
-  showToast(
-    'Demo zurückgesetzt'
-  );
-
-};
+  };
+}
 
 
 /* =========================================================
-   MOBILE
-========================================================= */
+   MOBILE MENU
+   ========================================================= */
 
 const mobile =
   $('#mobile');
 
 
-$('#hamb').onclick = () => {
+if($('#hamb')){
 
-  mobile.classList.toggle(
-    'open'
-  );
+  $('#hamb').onclick = () => {
 
-};
+    mobile?.classList.toggle(
+      'open'
+    );
+  };
+}
 
 
 document
-  .querySelectorAll(
-    '.mobile a'
-  )
-  .forEach(
+  .querySelectorAll('.mobile a')
+  .forEach(a => {
 
-    a => {
+    a.onclick = () => {
 
-      a.onclick = () => {
-
-        mobile.classList.remove(
-          'open'
-        );
-
-      };
-
-    }
-
-  );
+      mobile?.classList.remove(
+        'open'
+      );
+    };
+  });
 
 
 /* =========================================================
    SEARCH
-========================================================= */
+   ========================================================= */
 
-$('#search').onclick = () => {
+if($('#search')){
 
-  showToast(
-    'Demo-Suche — Event- und Sportfilter'
-  );
+  $('#search').onclick = () => {
 
-};
+    showToast(
+      'Demo-Suche — Event- und Sportfilter'
+    );
+  };
+}
 
 
 /* =========================================================
    SPORT FILTER
-========================================================= */
+   ========================================================= */
 
 const chips = [
-  ...document.querySelectorAll(
-    '.chip'
-  )
+  ...document.querySelectorAll('.chip')
 ];
 
 
-chips.forEach(
+chips.forEach(c => {
 
-  c => {
+  c.onclick = () => {
 
-    c.onclick = () => {
+    chips.forEach(x => {
 
-      chips.forEach(
-        x =>
-          x.classList.remove(
-            'active'
-          )
-      );
-
-
-      c.classList.add(
+      x.classList.remove(
         'active'
       );
 
-
-      const s =
-        c.dataset.sport;
+    });
 
 
-      document
-        .querySelectorAll(
-          '.match'
-        )
-        .forEach(
+    c.classList.add(
+      'active'
+    );
 
-          x => {
 
-            x.classList.toggle(
+    const s =
+      c.dataset.sport;
 
-              'hidden',
 
-              s !== 'all' &&
-              x.dataset.sport !== s
+    document
+      .querySelectorAll('.match')
+      .forEach(x => {
 
-            );
+        x.classList.toggle(
 
-          }
+          'hidden',
+
+          s !== 'all' &&
+          x.dataset.sport !== s
 
         );
-
-    };
-
-  }
-
-);
+      });
+  };
+});
 
 
 /* =========================================================
    START
-========================================================= */
+   ========================================================= */
 
 applyState();
 
