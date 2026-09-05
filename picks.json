@@ -4,7 +4,7 @@
       "sport": "FUSSBALL",
       "match": "FC Bayern — bremen",
       "tip": "über 1,5 tore",
-      "reason": "WINTIQ-Einschätzung: TEST der Discord-Verbindung.",
+      "reason": "Heute kein Garten",
       "tag": "TOP PICK",
       "odd": "1.20"
     },
@@ -12,7 +12,7 @@
       "sport": "TENNIS",
       "match": "Spieler A — Spieler B",
       "tip": "Spieler A",
-      "reason": "WINTIQ-Einschätzung: stärkerer Start in die Partie.",
+      "reason": "Heute kein Garten",
       "tag": "EDGE",
       "odd": "1.67"
     },
@@ -20,7 +20,7 @@
       "sport": "BASKETBAL",
       "match": "Lakers — Celtics",
       "tip": "Lakers",
-      "reason": "WINTIQ-Einschätzung: Matchup spricht leicht für das Heimteam.",
+      "reason": "Heute kein Garten",
       "tag": "WATCH",
       "odd": "1.99"
     }
