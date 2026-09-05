@@ -1,4 +1,4 @@
-name: Discord Pick Meldung
+name: WINTIQ Picks zu Discord
 
 on:
   push:
@@ -11,10 +11,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Repository laden
+        uses: actions/checkout@v4
+
+      - name: Picks auslesen
+        id: picks
+        run: |
+          MESSAGE="🟢 **WINTIQ BET – NEUE PICKS**"$'\n\n'
+
+          while IFS= read -r pick; do
+            SPORT=$(echo "$pick" | jq -r '.sport')
+            MATCH=$(echo "$pick" | jq -r '.match')
+            TIP=$(echo "$pick" | jq -r '.tip')
+            REASON=$(echo "$pick" | jq -r '.reason')
+            TAG=$(echo "$pick" | jq -r '.tag')
+            ODD=$(echo "$pick" | jq -r '.odd')
+
+            MESSAGE+="🏷️ **${TAG}**"$'\n'
+            MESSAGE+="⚽ **${SPORT}**"$'\n'
+            MESSAGE+="🎯 ${MATCH}"$'\n'
+            MESSAGE+="👉 **Tipp:** ${TIP}"$'\n'
+            MESSAGE+="📊 **Quote:** ${ODD}"$'\n'
+            MESSAGE+="🧠 ${REASON}"$'\n\n'
+          done < <(jq -c '.picks[]' picks.json)
+
+          echo "MESSAGE<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$MESSAGE" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
       - name: Discord Nachricht senden
         env:
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          MESSAGE: ${{ steps.picks.outputs.MESSAGE }}
         run: |
-          curl -f -H "Content-Type: application/json" \
-            -d '{"content":"🟢 **WINTIQ BET – TEST ERFOLGREICH!**\n\nDie Verbindung von GitHub zu Discord funktioniert."}' \
+          jq -n \
+            --arg content "$MESSAGE" \
+            '{content: $content}' > discord.json
+
+          curl -f \
+            -H "Content-Type: application/json" \
+            -d @discord.json \
             "$WEBHOOK"
