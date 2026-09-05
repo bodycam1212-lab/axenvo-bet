@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Repository laden
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Picks auslesen
         id: picks
