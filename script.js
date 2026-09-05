@@ -17,6 +17,8 @@
 /* =========================================================
    DEFAULTS
 ========================================================= */
+const DEMO_USER='Valentino';
+const DEMO_PASS='KOlin7127';
 
 const DEFAULTS = {
   heroTitle: 'SPORT.\nDATA.\nMOMENTUM.',
