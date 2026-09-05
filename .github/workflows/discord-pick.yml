@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "picks.json"
+  workflow_dispatch:
 
 jobs:
   discord:
@@ -14,6 +15,6 @@ jobs:
         env:
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          curl -H "Content-Type: application/json" \
-          -d '{"content":"🟢 **WINTIQ BET – Picks aktualisiert!**\n\nEin neuer Pick wurde auf der Website eingetragen oder geändert."}' \
-          "$WEBHOOK"
+          curl -f -H "Content-Type: application/json" \
+            -d '{"content":"🟢 **WINTIQ BET – TEST ERFOLGREICH!**\n\nDie Verbindung von GitHub zu Discord funktioniert."}' \
+            "$WEBHOOK"
