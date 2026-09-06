@@ -2,27 +2,11 @@
   "picks": [
     {
       "sport": "FUSSBALL",
-      "match": "FC Bayern — bremen",
-      "tip": "über 1,5 tore",
+      "match": "HSV-Mainz",
+      "tip": "HSV Gewinnt",
       "reason": "Heute kein Garten",
-      "tag": "TOP PICK",
-      "odd": "1.20"
-    },
-    {
-      "sport": "TENNIS",
-      "match": "Spieler A — Spieler B",
-      "tip": "Spieler A",
-      "reason": "Heute kein Garten",
-      "tag": "EDGE",
-      "odd": "1.67"
-    },
-    {
-      "sport": "BASKETBAL",
-      "match": "Lakers — Celtics",
-      "tip": "Lakers",
-      "reason": "Heute kein Garten",
-      "tag": "WATCH",
-      "odd": "1.99"
+      "tag": "6.09.2026",
+      "odd": "2.92"
     }
   ]
 }
