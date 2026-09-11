@@ -1,3 +1,12 @@
 {
-  "picks": []
+  "picks": [
+    {
+      "sport": "FUSSBALL",
+      "match": "SC Freiburg - Borussia Mönchengladbach",
+      "tip": "Heimsieg",
+      "reason": "Freiburg hat eine Siegesserie von 7 Spielen. \nZudem sind sie seit 10 Spielen gegen Gladbach ungeschlagen.",
+      "tag": "NEW",
+      "odd": "1.72"
+    }
+  ]
 }
