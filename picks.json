@@ -7,6 +7,14 @@
       "reason": "Freiburg hat eine Siegesserie von 7 Spielen. \nZudem sind sie seit 10 Spielen gegen Gladbach ungeschlagen.",
       "tag": "NEW",
       "odd": "1.72"
+    },
+    {
+      "sport": "FUSSBALL",
+      "match": "St.Pauli - VFL Wolfsburg",
+      "tip": "Doppelte Chance - X2",
+      "reason": "Wolfsburg ist seit 6 Spielen ungeschlagen. St.Pauli seit 7 sieglos. \nDie H2H Statistik spricht klar für Wolfsburg mit ebenfalls 7 ungeschlagen Partien",
+      "tag": "NEW",
+      "odd": "1.50"
     }
   ]
 }
