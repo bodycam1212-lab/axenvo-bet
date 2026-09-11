@@ -11,6 +11,41 @@
 const DEMO_USER = 'WINTIQ_MASTER';
 const DEMO_PASS = 'W!ntiqMaster#2026X';
 
+/*
+ * BENUTZER / ROLLEN
+ * WINTIQ_MASTER = Admin
+ * Ionix87 + Sxne1 = normale User
+ *
+ * Hinweis: Passwörter stehen hier nur für die Demo im Frontend.
+ * Für echte Sicherheit müssen Login und Rollen serverseitig geprüft werden.
+ */
+const USERS = {
+  [DEMO_USER]: {
+    password: DEMO_PASS,
+    role: 'admin'
+  },
+  'Ionix87': {
+    password: 'Aijw_291#12_09s',
+    role: 'user'
+  },
+  'Sxne1': {
+    password: 'K211093##duik_',
+    role: 'user'
+  }
+};
+
+function isAdmin() {
+  return sessionStorage.getItem('wintiqRole') === 'admin';
+}
+
+function updateAdminVisibility() {
+  const adminButton = $('#adminOpen');
+  if (!adminButton) return;
+
+  adminButton.classList.toggle('hidden', !isAdmin());
+  adminButton.setAttribute('aria-hidden', isAdmin() ? 'false' : 'true');
+}
+
 
 /* =========================================================
    DEFAULT DATEN
@@ -144,7 +179,7 @@ function saveState() {
    LOGIN
    ========================================================= */
 
-function unlockApp() {
+function unlockApp(role = 'user') {
   document.body.classList.remove('locked');
 
   $('#loginGate')?.classList.add('hidden');
@@ -152,10 +187,14 @@ function unlockApp() {
   $('#app')?.classList.remove('app-hidden');
 
   sessionStorage.setItem('wintiqUnlocked', '1');
+  sessionStorage.setItem('wintiqRole', role);
+
+  updateAdminVisibility();
 }
 
 function lockApp() {
   sessionStorage.removeItem('wintiqUnlocked');
+  sessionStorage.removeItem('wintiqRole');
 
   document.body.classList.add('locked');
 
@@ -169,8 +208,15 @@ function initLogin() {
 
   if (!form) return;
 
-  if (sessionStorage.getItem('wintiqUnlocked') === '1') {
-    unlockApp();
+  if (
+    sessionStorage.getItem('wintiqUnlocked') === '1' &&
+    sessionStorage.getItem('wintiqRole')
+  ) {
+    unlockApp(sessionStorage.getItem('wintiqRole'));
+  } else {
+    sessionStorage.removeItem('wintiqUnlocked');
+    sessionStorage.removeItem('wintiqRole');
+    updateAdminVisibility();
   }
 
   form.addEventListener('submit', event => {
@@ -180,13 +226,14 @@ function initLogin() {
     const pass = $('#loginPass')?.value || '';
 
     const error = $('#loginError');
+    const account = USERS[user];
 
-    if (user === DEMO_USER && pass === DEMO_PASS) {
+    if (account && account.password === pass) {
       if (error) {
         error.textContent = '';
       }
 
-      unlockApp();
+      unlockApp(account.role);
 
       return;
     }
@@ -571,6 +618,11 @@ function getGitHubSettings() {
 
 async function testGitHubToken() {
 
+  if (!isAdmin()) {
+    showToast('Kein Zugriff: GitHub ist nur für Admins.');
+    return;
+  }
+
   const status = $('#ghStatus');
 
   const {
@@ -691,6 +743,11 @@ function setGitHubStatus(message, type = '') {
    ========================================================= */
 
 async function publishPicksToGitHub() {
+
+  if (!isAdmin()) {
+    showToast('Kein Zugriff: GitHub ist nur für Admins.');
+    return;
+  }
 
   const btn =
     $('#publishGitHub');
@@ -997,6 +1054,11 @@ async function loadPublishedPicks() {
 
 function openAdmin() {
 
+  if (!isAdmin()) {
+    showToast('Kein Zugriff: Admin-Bereich ist nur für Admins.');
+    return;
+  }
+
   const panel =
     $('#adminPanel');
 
@@ -1183,6 +1245,11 @@ function renderAdminPicks() {
 
 function addPick() {
 
+  if (!isAdmin()) {
+    showToast('Kein Zugriff: Admin-Bereich ist nur für Admins.');
+    return;
+  }
+
   state.picks.push({
     sport: 'FUSSBALL',
     match: 'Neue Partie — Gegner',
@@ -1202,6 +1269,11 @@ function addPick() {
    ========================================================= */
 
 function saveAdmin() {
+
+  if (!isAdmin()) {
+    showToast('Kein Zugriff: Admin-Bereich ist nur für Admins.');
+    return;
+  }
 
   state.heroTitle =
     $('#aHeroTitle')?.value ||
@@ -1237,6 +1309,11 @@ function saveAdmin() {
    ========================================================= */
 
 function resetAdmin() {
+
+  if (!isAdmin()) {
+    showToast('Kein Zugriff: Admin-Bereich ist nur für Admins.');
+    return;
+  }
 
   const confirmed =
     confirm(
@@ -1334,6 +1411,8 @@ function initFilters() {
    ========================================================= */
 
 function initAdmin() {
+
+  updateAdminVisibility();
 
   $('#adminOpen')
     ?.addEventListener(
