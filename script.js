@@ -1,18 +1,61 @@
 /* =========================================================
    WINTIQ BET
    Frontend Demo + GitHub Picks Publishing
+   + Password Reset Inbox
    ========================================================= */
+
+
+/* =========================================================
+   BACKEND
+   ========================================================= */
+
+/*
+  WICHTIG:
+
+  Für ein echtes gemeinsames Passwort-Postfach muss hier
+  später die URL deines Backends eingetragen werden.
+
+  Beispiel:
+
+  const API_BASE = 'https://api.deine-domain.de';
+
+  Wenn API_BASE leer bleibt, benutzt die Demo automatisch
+  localStorage.
+
+  localStorage bedeutet:
+  Die Anfrage ist nur auf DIESEM Browser gespeichert.
+
+  Für ein echtes gemeinsames Postfach:
+  API_BASE setzen und die API-Endpunkte bereitstellen.
+*/
+
+const API_BASE = '';
 
 
 /* =========================================================
    LOGIN
    ========================================================= */
 
-const DEMO_USER = 'WINTIQ_MASTER';
-const DEMO_PASS = 'W!ntiqMaster#2026X';
+const USERS = {
 
-function isAdmin() { return currentUser?.role === 'admin'; }
-let currentUser = { username: DEMO_USER, role: 'admin' };
+  WINTIQ_MASTER: {
+    password: 'W!ntiqMaster#2026X',
+    role: 'admin'
+  },
+
+  Ionix87: {
+    password: 'Ajjw_291#12_O9s',
+    role: 'user'
+  },
+
+  Sxne1: {
+    password: 'K211093##duik_',
+    role: 'user'
+  }
+
+};
+
+let currentUser = null;
 
 
 /* =========================================================
@@ -20,51 +63,59 @@ let currentUser = { username: DEMO_USER, role: 'admin' };
    ========================================================= */
 
 const DEFAULTS = {
-  heroTitle: 'SPORT.\nDATA.\nMOMENTUM.',
+
+  heroTitle:
+    'SPORT.\nDATA.\nMOMENTUM.',
 
   heroText:
     'Ein radikales Sports-Interface für schnelle Entscheidungen, klare Daten und redaktionelle Picks.',
 
-  release: '2026-09-11',
+  release:
+    '2026-09-11',
 
   pulse:
-    'Live intelligence · Pick feed',
-
+    'Live intelligence · Demo feed',
 
   picks: [
+
     {
-      id: 'pick-1',
       sport: 'FUSSBALL',
       match: 'FC Bayern — FC SCHALKE 04',
       tip: 'Heimsieg',
-      reason: 'WINTIQ-Einschätzung: TEST der Discord-Verbindung.',
+      reason:
+        'WINTIQ-Einschätzung: TEST der Discord-Verbindung.',
       tag: 'TOP PICK',
       odd: '9.09',
-      status: 'COMING'
+      startAt: '2026-09-12T14:15:00+02:00',
+      durationMinutes: 105
     },
+
     {
-      id: 'pick-2',
       sport: 'TENNIS',
       match: 'Spieler A — Spieler B',
       tip: 'Spieler A',
-      reason: 'WINTIQ-Einschätzung: stärkerer Start in die Partie.',
+      reason:
+        'WINTIQ-Einschätzung: stärkerer Start in die Partie.',
       tag: 'EDGE',
       odd: '1.85',
-      status: 'COMING'
+      startAt: '2026-09-12T15:30:00+02:00',
+      durationMinutes: 120
     },
+
     {
-      id: 'pick-3',
       sport: 'BASKETBALL',
       match: 'Lakers — Celtics',
       tip: 'Lakers',
-      reason: 'WINTIQ-Einschätzung: Matchup spricht leicht für das Heimteam.',
+      reason:
+        'WINTIQ-Einschätzung: Matchup spricht leicht für das Heimteam.',
       tag: 'WATCH',
       odd: '1.92',
-      status: 'COMING'
+      startAt: '2026-09-12T18:00:00+02:00',
+      durationMinutes: 150
     }
-  ],
 
-  ticker: []
+  ]
+
 };
 
 
@@ -79,19 +130,26 @@ let state = loadState();
    HELPER
    ========================================================= */
 
-const $ = selector => document.querySelector(selector);
+const $ = selector =>
+  document.querySelector(selector);
+
 
 function escapeHtml(value) {
+
   return String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+
 }
 
+
 function utf8ToBase64(text) {
-  const bytes = new TextEncoder().encode(text);
+
+  const bytes =
+    new TextEncoder().encode(text);
 
   let binary = '';
 
@@ -100,21 +158,31 @@ function utf8ToBase64(text) {
   });
 
   return btoa(binary);
+
 }
 
+
 function showToast(message) {
-  const toast = $('#toast');
+
+  const toast =
+    $('#toast');
 
   if (!toast) return;
 
-  toast.textContent = message;
+  toast.textContent =
+    message;
+
   toast.classList.add('show');
 
   clearTimeout(showToast.timer);
 
-  showToast.timer = setTimeout(() => {
-    toast.classList.remove('show');
-  }, 3500);
+  showToast.timer =
+    setTimeout(() => {
+
+      toast.classList.remove('show');
+
+    }, 3500);
+
 }
 
 
@@ -123,47 +191,55 @@ function showToast(message) {
    ========================================================= */
 
 function loadState() {
+
   try {
-    const saved = localStorage.getItem('wintiqState');
+
+    const saved =
+      localStorage.getItem('wintiqState');
 
     if (saved) {
-      const parsed = JSON.parse(saved);
 
-      const loaded = { ...DEFAULTS, ...parsed };
+      const parsed =
+        JSON.parse(saved);
 
-      loaded.picks = (
-        Array.isArray(parsed.picks)
-          ? parsed.picks
-          : DEFAULTS.picks
-      ).map((pick, index) => ({
-        id: pick.id || `pick-${index + 1}`,
-        ...pick,
-        status: pick.status || 'COMING'
-      }));
+      return {
 
-      loaded.ticker = Array.isArray(parsed.ticker)
-        ? parsed.ticker
-        : [];
+        ...DEFAULTS,
 
-      return loaded;
+        ...parsed,
+
+        picks:
+          Array.isArray(parsed.picks)
+            ? parsed.picks
+            : DEFAULTS.picks
+
+      };
+
     }
+
   } catch (error) {
+
     console.error(
       'State konnte nicht geladen werden:',
       error
     );
+
   }
 
   return JSON.parse(
     JSON.stringify(DEFAULTS)
   );
+
 }
 
+
 function saveState() {
+
   localStorage.setItem(
     'wintiqState',
     JSON.stringify(state)
   );
+
 }
 
 
@@ -171,82 +247,1338 @@ function saveState() {
    LOGIN
    ========================================================= */
 
-function unlockApp() {
+function unlockApp(user, role) {
+
+  currentUser = {
+    user,
+    role
+  };
+
   document.body.classList.remove('locked');
 
-  $('#loginGate')?.classList.add('hidden');
+  $('#loginGate')
+    ?.classList.add('hidden');
 
-  $('#app')?.classList.remove('app-hidden');
+  $('#app')
+    ?.classList.remove('app-hidden');
 
   sessionStorage.setItem(
-    'wintiqUnlocked',
-    '1'
+    'wintiqUser',
+    JSON.stringify(currentUser)
   );
+
+  const label =
+    $('#currentUserLabel');
+
+  if (label) {
+
+    label.textContent =
+      role === 'admin'
+        ? `${user} · ADMIN`
+        : `${user} · USER`;
+
+  }
+
+  updateUserPermissions();
+
 }
+
 
 function lockApp() {
+
+  currentUser = null;
+
   sessionStorage.removeItem(
-    'wintiqUnlocked'
+    'wintiqUser'
   );
 
-  document.body.classList.add('locked');
+  document.body.classList.add(
+    'locked'
+  );
 
-  $('#loginGate')?.classList.remove('hidden');
+  $('#loginGate')
+    ?.classList.remove('hidden');
 
-  $('#app')?.classList.add('app-hidden');
+  $('#app')
+    ?.classList.add('app-hidden');
+
+  closeAdmin();
+  closeResetModal();
+
 }
 
+
+/* =========================================================
+   ADMIN CHECK
+   ========================================================= */
+
+function isAdmin() {
+
+  return (
+    currentUser?.role === 'admin'
+  );
+
+}
+
+
+function updateUserPermissions() {
+
+  const adminOpen =
+    $('#adminOpen');
+
+  if (!adminOpen) return;
+
+  if (isAdmin()) {
+
+    adminOpen.classList.remove(
+      'hidden'
+    );
+
+  } else {
+
+    adminOpen.classList.add(
+      'hidden'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   LOGIN INIT
+   ========================================================= */
+
 function initLogin() {
-  const form = $('#loginForm');
+
+  const form =
+    $('#loginForm');
 
   if (!form) return;
 
-  if (
-    sessionStorage.getItem(
-      'wintiqUnlocked'
-    ) === '1'
-  ) {
-    unlockApp();
+
+  try {
+
+    const saved =
+      sessionStorage.getItem(
+        'wintiqUser'
+      );
+
+    if (saved) {
+
+      const parsed =
+        JSON.parse(saved);
+
+      const account =
+        USERS[parsed?.user];
+
+      /*
+        Session nur wiederherstellen,
+        wenn Benutzer UND Rolle mit
+        dem festgelegten Account übereinstimmen.
+      */
+
+      if (
+        account &&
+        parsed.user &&
+        parsed.role === account.role
+      ) {
+
+        currentUser = {
+          user: parsed.user,
+          role: account.role
+        };
+
+        unlockApp(
+          parsed.user,
+          account.role
+        );
+
+      } else {
+
+        sessionStorage.removeItem(
+          'wintiqUser'
+        );
+
+      }
+
+    }
+
+  } catch (error) {
+
+    console.warn(
+      'Login-Session konnte nicht geladen werden:',
+      error
+    );
+
+    sessionStorage.removeItem(
+      'wintiqUser'
+    );
+
   }
+
 
   form.addEventListener(
     'submit',
     event => {
+
       event.preventDefault();
 
       const user =
-        $('#loginUser')?.value.trim() || '';
+        $('#loginUser')
+          ?.value
+          .trim() || '';
 
       const pass =
-        $('#loginPass')?.value || '';
+        $('#loginPass')
+          ?.value || '';
 
       const error =
         $('#loginError');
 
+      const account =
+        USERS[user];
+
+
       if (
-        user === DEMO_USER &&
-        pass === DEMO_PASS
+        account &&
+        account.password === pass
       ) {
+
         if (error) {
           error.textContent = '';
         }
 
-        unlockApp();
+        unlockApp(
+          user,
+          account.role
+        );
 
         return;
+
       }
 
+
       if (error) {
+
         error.textContent =
           'Benutzername oder Passwort ist falsch.';
+
       }
+
     }
   );
 
-  $('#logout')?.addEventListener(
-    'click',
-    lockApp
+
+  $('#logout')
+    ?.addEventListener(
+      'click',
+      lockApp
+    );
+
+
+  $('#forgotPasswordBtn')
+    ?.addEventListener(
+      'click',
+      openResetModal
+    );
+
+}
+
+
+/* =========================================================
+   PASSWORD RESET MODAL
+   ========================================================= */
+
+function openResetModal() {
+
+  const modal =
+    $('#resetModal');
+
+  if (!modal) return;
+
+  const username =
+    $('#resetUsername');
+
+  const message =
+    $('#resetMessage');
+
+  if (username) {
+    username.value = '';
+  }
+
+  if (message) {
+    message.textContent = '';
+    message.className =
+      'reset-message';
+  }
+
+  modal.classList.remove(
+    'hidden'
   );
+
+}
+
+
+function closeResetModal() {
+
+  $('#resetModal')
+    ?.classList.add('hidden');
+
+}
+
+
+/* =========================================================
+   PASSWORD RESET REQUEST
+   ========================================================= */
+
+async function requestPasswordReset() {
+
+  const input =
+    $('#resetUsername');
+
+  const message =
+    $('#resetMessage');
+
+  const button =
+    $('#sendResetRequest');
+
+  const username =
+    input?.value.trim() || '';
+
+
+  if (!username) {
+
+    setResetMessage(
+      'Bitte einen Benutzernamen eingeben.',
+      'error'
+    );
+
+    return;
+
+  }
+
+
+  /*
+    Wir akzeptieren nur bekannte Accounts.
+
+    Dadurch können nicht beliebige Fantasie-Accounts
+    in das Admin-Postfach geschrieben werden.
+  */
+
+  if (!USERS[username]) {
+
+    setResetMessage(
+      'Dieser Benutzername ist nicht registriert.',
+      'error'
+    );
+
+    return;
+
+  }
+
+
+  if (button) {
+
+    button.disabled = true;
+
+    button.textContent =
+      'Wird gesendet …';
+
+  }
+
+
+  const request = {
+
+    id:
+      createRequestId(),
+
+    username,
+
+    status:
+      'pending',
+
+    createdAt:
+      new Date().toISOString()
+
+  };
+
+
+  try {
+
+    if (API_BASE) {
+
+      await apiCreatePasswordRequest(
+        request
+      );
+
+    } else {
+
+      saveLocalPasswordRequest(
+        request
+      );
+
+    }
+
+
+    setResetMessage(
+      'Passwort-Anfrage wurde an den Administrator gesendet.',
+      'ok'
+    );
+
+    showToast(
+      'Passwort-Anfrage gesendet ✓'
+    );
+
+
+    setTimeout(() => {
+
+      closeResetModal();
+
+    }, 1800);
+
+
+  } catch (error) {
+
+    console.error(
+      'Passwort-Anfrage fehlgeschlagen:',
+      error
+    );
+
+    setResetMessage(
+      error.message ||
+      'Die Anfrage konnte nicht gesendet werden.',
+      'error'
+    );
+
+  } finally {
+
+    if (button) {
+
+      button.disabled = false;
+
+      button.textContent =
+        'Anfrage senden →';
+
+    }
+
+  }
+
+}
+
+
+function setResetMessage(
+  text,
+  type = ''
+) {
+
+  const element =
+    $('#resetMessage');
+
+  if (!element) return;
+
+  element.textContent =
+    text;
+
+  element.className =
+    `reset-message ${type}`;
+
+}
+
+
+/* =========================================================
+   PASSWORD REQUEST ID
+   ========================================================= */
+
+function createRequestId() {
+
+  return (
+    'PW-' +
+    Date.now().toString(36).toUpperCase() +
+    '-' +
+    Math.random()
+      .toString(36)
+      .slice(2, 8)
+      .toUpperCase()
+  );
+
+}
+
+
+/* =========================================================
+   LOCAL PASSWORD REQUESTS
+   ========================================================= */
+
+function getLocalPasswordRequests() {
+
+  try {
+
+    const value =
+      localStorage.getItem(
+        'wintiqPasswordRequests'
+      );
+
+    if (!value) {
+      return [];
+    }
+
+    const parsed =
+      JSON.parse(value);
+
+    return Array.isArray(parsed)
+      ? parsed
+      : [];
+
+  } catch (error) {
+
+    console.error(
+      'Passwort-Anfragen konnten nicht gelesen werden:',
+      error
+    );
+
+    return [];
+
+  }
+
+}
+
+
+function saveLocalPasswordRequest(
+  request
+) {
+
+  const requests =
+    getLocalPasswordRequests();
+
+  /*
+    Doppelte offene Anfrage desselben
+    Benutzers verhindern.
+  */
+
+  const alreadyPending =
+    requests.some(item =>
+      item.username === request.username &&
+      item.status === 'pending'
+    );
+
+  if (alreadyPending) {
+
+    throw new Error(
+      'Für diesen Benutzer existiert bereits eine offene Anfrage.'
+    );
+
+  }
+
+
+  requests.unshift(
+    request
+  );
+
+  localStorage.setItem(
+    'wintiqPasswordRequests',
+    JSON.stringify(requests)
+  );
+
+}
+
+
+/* =========================================================
+   BACKEND REQUEST
+   ========================================================= */
+
+async function apiCreatePasswordRequest(
+  request
+) {
+
+  const response =
+    await fetch(
+      `${API_BASE}/password-requests`,
+      {
+        method: 'POST',
+
+        headers: {
+          'Content-Type':
+            'application/json'
+        },
+
+        body:
+          JSON.stringify(request)
+      }
+    );
+
+
+  const data =
+    await response
+      .json()
+      .catch(() => ({}));
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      data.message ||
+      `Serverfehler ${response.status}`
+    );
+
+  }
+
+
+  return data;
+
+}
+
+
+/* =========================================================
+   LOAD PASSWORD REQUESTS
+   ========================================================= */
+
+async function loadPasswordRequests() {
+
+  if (!isAdmin()) {
+    return;
+  }
+
+
+  const container =
+    $('#passwordRequestList');
+
+  if (!container) {
+    return;
+  }
+
+
+  container.innerHTML = `
+    <div class="password-inbox-empty">
+      Anfragen werden geladen …
+    </div>
+  `;
+
+
+  try {
+
+    let requests;
+
+
+    if (API_BASE) {
+
+      requests =
+        await apiGetPasswordRequests();
+
+    } else {
+
+      requests =
+        getLocalPasswordRequests();
+
+    }
+
+
+    renderPasswordRequests(
+      requests
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      'Passwort-Anfragen konnten nicht geladen werden:',
+      error
+    );
+
+    container.innerHTML = `
+      <div class="password-inbox-empty">
+        Passwort-Anfragen konnten nicht geladen werden.
+      </div>
+    `;
+
+  }
+
+}
+
+
+async function apiGetPasswordRequests() {
+
+  const response =
+    await fetch(
+      `${API_BASE}/password-requests`,
+      {
+        method: 'GET',
+        headers: {
+          Accept:
+            'application/json'
+        }
+      }
+    );
+
+
+  const data =
+    await response
+      .json()
+      .catch(() => ({}));
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      data.message ||
+      `Serverfehler ${response.status}`
+    );
+
+  }
+
+
+  return Array.isArray(data)
+    ? data
+    : data.requests || [];
+
+}
+
+
+/* =========================================================
+   RENDER PASSWORD REQUESTS
+   ========================================================= */
+
+function renderPasswordRequests(
+  requests
+) {
+
+  const container =
+    $('#passwordRequestList');
+
+  const counter =
+    $('#pendingResetCount');
+
+  if (!container) return;
+
+
+  if (!Array.isArray(requests)) {
+    requests = [];
+  }
+
+
+  const pending =
+    requests.filter(
+      request =>
+        request.status === 'pending'
+    );
+
+
+  if (counter) {
+
+    counter.textContent =
+      String(pending.length);
+
+  }
+
+
+  if (!requests.length) {
+
+    container.innerHTML = `
+      <div class="password-inbox-empty">
+        Keine Passwort-Anfragen vorhanden.
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    requests.map(
+      request =>
+        renderPasswordRequest(
+          request
+        )
+    ).join('');
+
+
+  container
+    .querySelectorAll(
+      '[data-change-password]'
+    )
+    .forEach(button => {
+
+      button.addEventListener(
+        'click',
+        () => {
+
+          const id =
+            button.dataset.changePassword;
+
+          openPasswordChange(
+            id
+          );
+
+        }
+      );
+
+    });
+
+
+  container
+    .querySelectorAll(
+      '[data-save-password]'
+    )
+    .forEach(button => {
+
+      button.addEventListener(
+        'click',
+        () => {
+
+          const id =
+            button.dataset.savePassword;
+
+          saveNewPassword(
+            id
+          );
+
+        }
+      );
+
+    });
+
+
+  container
+    .querySelectorAll(
+      '[data-delete-request]'
+    )
+    .forEach(button => {
+
+      button.addEventListener(
+        'click',
+        () => {
+
+          const id =
+            button.dataset.deleteRequest;
+
+          deletePasswordRequest(
+            id
+          );
+
+        }
+      );
+
+    });
+
+}
+
+
+function renderPasswordRequest(
+  request
+) {
+
+  const isPending =
+    request.status === 'pending';
+
+
+  const date =
+    request.createdAt
+      ? new Date(
+          request.createdAt
+        ).toLocaleString('de-DE')
+      : '—';
+
+
+  return `
+
+    <div
+      class="password-request ${
+        isPending
+          ? 'pending'
+          : 'done'
+      }"
+      data-request-id="${escapeHtml(request.id)}"
+    >
+
+      <div class="password-request-top">
+
+        <span class="password-request-user">
+          ${escapeHtml(request.username)}
+        </span>
+
+        <span
+          class="password-request-status ${
+            isPending
+              ? 'pending'
+              : 'done'
+          }"
+        >
+          ${
+            isPending
+              ? 'OFFEN'
+              : 'ERLEDIGT'
+          }
+        </span>
+
+      </div>
+
+
+      <div class="password-request-meta">
+
+        Anfrage:
+        ${escapeHtml(date)}
+
+        <br>
+
+        ID:
+        ${escapeHtml(request.id)}
+
+      </div>
+
+
+      ${
+        isPending
+          ? `
+            <div class="password-request-actions">
+
+              <button
+                type="button"
+                class="primary"
+                data-change-password="${escapeHtml(request.id)}"
+              >
+                Passwort ändern
+              </button>
+
+              <button
+                type="button"
+                class="ghost"
+                data-delete-request="${escapeHtml(request.id)}"
+              >
+                Löschen
+              </button>
+
+            </div>
+
+            <div
+              class="password-change-box hidden"
+              id="change-${escapeHtml(request.id)}"
+            >
+
+              <label>
+                Neues Passwort
+                <input
+                  type="password"
+                  id="new-password-${escapeHtml(request.id)}"
+                  autocomplete="new-password"
+                  placeholder="Neues Passwort"
+                >
+              </label>
+
+              <label>
+                Neues Passwort wiederholen
+                <input
+                  type="password"
+                  id="new-password-confirm-${escapeHtml(request.id)}"
+                  autocomplete="new-password"
+                  placeholder="Passwort wiederholen"
+                >
+              </label>
+
+              <button
+                type="button"
+                class="primary"
+                data-save-password="${escapeHtml(request.id)}"
+              >
+                Neues Passwort speichern
+              </button>
+
+            </div>
+          `
+          : `
+            <div class="password-request-actions">
+
+              <button
+                type="button"
+                class="ghost"
+                data-delete-request="${escapeHtml(request.id)}"
+              >
+                Anfrage löschen
+              </button>
+
+            </div>
+          `
+      }
+
+    </div>
+
+  `;
+
+}
+
+
+/* =========================================================
+   OPEN PASSWORD CHANGE
+   ========================================================= */
+
+function openPasswordChange(
+  id
+) {
+
+  if (!isAdmin()) {
+
+    showToast(
+      'Keine Berechtigung.'
+    );
+
+    return;
+
+  }
+
+
+  const box =
+    document.getElementById(
+      `change-${id}`
+    );
+
+  if (!box) return;
+
+  box.classList.toggle(
+    'hidden'
+  );
+
+}
+
+
+/* =========================================================
+   SAVE NEW PASSWORD
+   ========================================================= */
+
+async function saveNewPassword(
+  id
+) {
+
+  if (!isAdmin()) {
+
+    showToast(
+      'Keine Berechtigung.'
+    );
+
+    return;
+
+  }
+
+
+  const password =
+    document.getElementById(
+      `new-password-${id}`
+    )?.value || '';
+
+
+  const confirmPassword =
+    document.getElementById(
+      `new-password-confirm-${id}`
+    )?.value || '';
+
+
+  if (!password) {
+
+    showToast(
+      'Bitte ein neues Passwort eingeben.'
+    );
+
+    return;
+
+  }
+
+
+  if (password.length < 8) {
+
+    showToast(
+      'Das neue Passwort muss mindestens 8 Zeichen haben.'
+    );
+
+    return;
+
+  }
+
+
+  if (password !== confirmPassword) {
+
+    showToast(
+      'Die Passwörter stimmen nicht überein.'
+    );
+
+    return;
+
+  }
+
+
+  const requests =
+    API_BASE
+      ? null
+      : getLocalPasswordRequests();
+
+
+  const request =
+    requests?.find(
+      item =>
+        item.id === id
+    );
+
+
+  if (!API_BASE && !request) {
+
+    showToast(
+      'Passwort-Anfrage wurde nicht gefunden.'
+    );
+
+    return;
+
+  }
+
+
+  try {
+
+    if (API_BASE) {
+
+      await apiChangePassword(
+        id,
+        password
+      );
+
+    } else {
+
+      /*
+        DEMO:
+
+        Passwort lokal aktualisieren.
+
+        Hinweis:
+        Diese Änderung gilt nur in diesem Browser.
+      */
+
+      const username =
+        request.username;
+
+      if (!USERS[username]) {
+
+        throw new Error(
+          'Benutzerkonto nicht gefunden.'
+        );
+
+      }
+
+
+      USERS[username].password =
+        password;
+
+
+      const index =
+        requests.findIndex(
+          item =>
+            item.id === id
+        );
+
+
+      if (index !== -1) {
+
+        requests[index].status =
+          'done';
+
+        requests[index].completedAt =
+          new Date().toISOString();
+
+        requests[index].completedBy =
+          currentUser.user;
+
+      }
+
+
+      localStorage.setItem(
+        'wintiqPasswordRequests',
+        JSON.stringify(requests)
+      );
+
+    }
+
+
+    showToast(
+      'Passwort erfolgreich geändert ✓'
+    );
+
+
+    await loadPasswordRequests();
+
+
+  } catch (error) {
+
+    console.error(
+      'Passwort konnte nicht geändert werden:',
+      error
+    );
+
+    showToast(
+      error.message ||
+      'Passwort konnte nicht geändert werden.'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   API PASSWORD CHANGE
+   ========================================================= */
+
+async function apiChangePassword(
+  id,
+  password
+) {
+
+  const response =
+    await fetch(
+      `${API_BASE}/password-requests/${encodeURIComponent(id)}`,
+      {
+        method: 'PATCH',
+
+        headers: {
+          'Content-Type':
+            'application/json'
+        },
+
+        body:
+          JSON.stringify({
+            password
+          })
+      }
+    );
+
+
+  const data =
+    await response
+      .json()
+      .catch(() => ({}));
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      data.message ||
+      `Serverfehler ${response.status}`
+    );
+
+  }
+
+
+  return data;
+
+}
+
+
+/* =========================================================
+   DELETE PASSWORD REQUEST
+   ========================================================= */
+
+async function deletePasswordRequest(
+  id
+) {
+
+  if (!isAdmin()) {
+
+    showToast(
+      'Keine Berechtigung.'
+    );
+
+    return;
+
+  }
+
+
+  if (
+    !confirm(
+      'Diese Passwort-Anfrage wirklich löschen?'
+    )
+  ) {
+
+    return;
+
+  }
+
+
+  try {
+
+    if (API_BASE) {
+
+      await apiDeletePasswordRequest(
+        id
+      );
+
+    } else {
+
+      const requests =
+        getLocalPasswordRequests();
+
+      const filtered =
+        requests.filter(
+          item =>
+            item.id !== id
+        );
+
+      localStorage.setItem(
+        'wintiqPasswordRequests',
+        JSON.stringify(filtered)
+      );
+
+    }
+
+
+    showToast(
+      'Anfrage gelöscht.'
+    );
+
+
+    await loadPasswordRequests();
+
+
+  } catch (error) {
+
+    console.error(
+      'Anfrage konnte nicht gelöscht werden:',
+      error
+    );
+
+    showToast(
+      error.message ||
+      'Anfrage konnte nicht gelöscht werden.'
+    );
+
+  }
+
+}
+
+
+async function apiDeletePasswordRequest(
+  id
+) {
+
+  const response =
+    await fetch(
+      `${API_BASE}/password-requests/${encodeURIComponent(id)}`,
+      {
+        method: 'DELETE'
+      }
+    );
+
+
+  const data =
+    await response
+      .json()
+      .catch(() => ({}));
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      data.message ||
+      `Serverfehler ${response.status}`
+    );
+
+  }
+
+
+  return data;
+
 }
 
 
@@ -255,59 +1587,106 @@ function initLogin() {
    ========================================================= */
 
 function renderHero() {
-  const title = $('#heroTitle');
-  const text = $('#heroText');
-  const pulse = $('#pulseText');
-  const releaseMeta = $('#releaseMeta');
-  const releaseBig = $('#releaseDateBig');
+
+  const title =
+    $('#heroTitle');
+
+  const text =
+    $('#heroText');
+
+  const pulse =
+    $('#pulseText');
+
+  const releaseMeta =
+    $('#releaseMeta');
+
+  const releaseBig =
+    $('#releaseDateBig');
+
 
   if (title) {
+
     title.innerHTML =
-      escapeHtml(state.heroTitle)
-        .replace(/\n/g, '<br>');
+      escapeHtml(
+        state.heroTitle
+      ).replace(
+        /\n/g,
+        '<br>'
+      );
+
   }
+
 
   if (text) {
+
     text.textContent =
       state.heroText;
+
   }
+
 
   if (pulse) {
+
     pulse.textContent =
       state.pulse;
+
   }
 
+
   const date =
-    formatDate(state.release);
+    formatDate(
+      state.release
+    );
+
 
   if (releaseMeta) {
+
     releaseMeta.textContent =
       date;
+
   }
+
 
   if (releaseBig) {
+
     releaseBig.textContent =
       date;
+
   }
+
 }
 
-function formatDate(dateString) {
-  if (!dateString) return '—';
+
+function formatDate(
+  dateString
+) {
+
+  if (!dateString) {
+    return '—';
+  }
+
 
   const date =
-    new Date(`${dateString}T00:00:00`);
+    new Date(
+      `${dateString}T00:00:00`
+    );
+
 
   if (
     Number.isNaN(
       date.getTime()
     )
   ) {
+
     return dateString;
+
   }
+
 
   return date.toLocaleDateString(
     'de-DE'
   );
+
 }
 
 
@@ -316,309 +1695,239 @@ function formatDate(dateString) {
    ========================================================= */
 
 function updateCountdown() {
-  const timer = $('#timer');
-  const days = $('#days');
 
-  if (!state.release) return;
+  const timer =
+    $('#timer');
+
+  const days =
+    $('#days');
+
+
+  if (!state.release) {
+    return;
+  }
+
 
   const target =
     new Date(
       `${state.release}T00:00:00`
     ).getTime();
 
-  const now = Date.now();
+
+  const now =
+    Date.now();
+
 
   let diff =
     target - now;
+
 
   if (diff < 0) {
     diff = 0;
   }
 
+
   const totalSeconds =
-    Math.floor(diff / 1000);
+    Math.floor(
+      diff / 1000
+    );
+
 
   const d =
     Math.floor(
       totalSeconds / 86400
     );
 
+
   const h =
     Math.floor(
-      (totalSeconds % 86400) / 3600
+      (totalSeconds % 86400) /
+      3600
     );
+
 
   const m =
     Math.floor(
-      (totalSeconds % 3600) / 60
+      (totalSeconds % 3600) /
+      60
     );
+
 
   const s =
     totalSeconds % 60;
 
+
   const pad =
     value =>
-      String(value).padStart(
-        2,
-        '0'
-      );
+      String(value)
+        .padStart(2, '0');
+
 
   if (timer) {
+
     timer.textContent =
       `${pad(d)} : ${pad(h)} : ${pad(m)} : ${pad(s)}`;
+
   }
 
+
   if (days) {
+
     days.textContent =
       `${pad(d)} DAYS`;
+
   }
+
 }
 
 
 /* =========================================================
-   PICKS + LIVE TICKER
+   LIVE PICK TRACKING + PICKS
    ========================================================= */
 
-function getPickById(id) {
-  return state.picks.find(
-    pick => pick.id === id
-  );
+function getPickLiveState(pick, index) {
+  const fallbackStarts = [
+    '2026-09-13T16:30:00+02:00',
+    '2026-09-13T18:00:00+02:00',
+    '2026-09-13T20:30:00+02:00'
+  ];
+  const rawStart = pick.startAt || fallbackStarts[index % fallbackStarts.length];
+  const start = new Date(rawStart).getTime();
+  const duration = Math.max(60, Number(pick.durationMinutes) || 105);
+  const end = start + duration * 60 * 1000;
+  const now = Date.now();
+  if (!Number.isFinite(start)) return {status:'unknown',start:NaN,end:NaN,duration,elapsed:0,minute:0,remaining:NaN};
+  if (now < start) return {status:'upcoming',start,end,duration,elapsed:0,minute:0,remaining:start-now};
+  if (now >= end) return {status:'finished',start,end,duration,elapsed:duration,minute:duration,remaining:0};
+  const elapsed = Math.floor((now-start)/60000);
+  return {status:'live',start,end,duration,elapsed,minute:Math.max(1,elapsed+1),remaining:end-now};
 }
 
-function statusLabel(status) {
-  return ({
-    COMING: 'COMING',
-    LIVE: 'LIVE',
-    WON: 'WON',
-    LOST: 'LOST',
-    VOID: 'VOID'
-  })[status] || 'COMING';
+function getSimulatedPickScore(pick,index,liveState){
+  const seed=`${pick.match||''}|${pick.tip||''}|${index}`;
+  let hash=0; for(let i=0;i<seed.length;i++) hash=((hash<<5)-hash+seed.charCodeAt(i))|0;
+  hash=Math.abs(hash);
+  if(liveState.status==='upcoming'||liveState.status==='unknown') return [0,0];
+  const progress=liveState.status==='finished'?1:Math.min(1,liveState.elapsed/Math.max(1,liveState.duration));
+  return [Math.min(5,Math.floor(progress*(hash%4+1))),Math.min(5,Math.floor(progress*((hash>>3)%3+1)))];
 }
 
-function statusClass(status) {
-  return `status-${String(
-    status || 'COMING'
-  ).toLowerCase()}`;
+function getPickVerdict(pick,index){
+  const live=getPickLiveState(pick,index);
+  if(live.status==='upcoming'||live.status==='unknown') return 'pending';
+  const [home,away]=getSimulatedPickScore(pick,index,live);
+  const tip=String(pick.tip||'').toLowerCase();
+  if(tip.includes('unentschieden')||tip.includes('draw')) return home===away?'correct':'wrong';
+  if(tip.includes('auswärt')||tip.includes('away')) return away>home?'correct':'wrong';
+  if(tip.includes('over')||tip.includes('mehr')) return home+away>=3?'correct':'wrong';
+  if(tip.includes('under')||tip.includes('weniger')) return home+away<3?'correct':'wrong';
+  return home>away?'correct':'wrong';
 }
 
-function formatTime(timestamp) {
-  const date =
-    new Date(timestamp);
+function formatPickDateTime(timestamp){
+  if(!Number.isFinite(timestamp)) return 'Datum nicht festgelegt';
+  return new Intl.DateTimeFormat('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(timestamp));
+}
+function formatClock(timestamp){
+  if(!Number.isFinite(timestamp)) return '--:--';
+  return new Intl.DateTimeFormat('de-DE',{hour:'2-digit',minute:'2-digit'}).format(new Date(timestamp));
+}
+function formatRemaining(ms){
+  if(!Number.isFinite(ms)||ms<=0) return '0:00';
+  const total=Math.ceil(ms/1000),h=Math.floor(total/3600),m=Math.floor((total%3600)/60),sec=total%60;
+  return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`:`${m}:${String(sec).padStart(2,'0')}`;
+}
+function getPickTeamNames(pick){
+  const parts=String(pick.match||'').split(/\s+[—–-]\s+/);
+  return {home:parts[0]?.trim()||'Team A',away:parts[1]?.trim()||'Team B'};
+}
+function getPickDateLabel(live){
+  if(!Number.isFinite(live.start)) return 'Datum nicht festgelegt';
+  const now=Date.now();
+  const date=new Intl.DateTimeFormat('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(live.start));
+  const time=formatClock(live.start);
+  if(live.status==='upcoming') return `${date} · ${time} · startet`;
+  if(live.status==='live') return `${date} · ${time} · seit Spielbeginn`;
+  return `${date} · ${time} · war am ${date}`;
+}
 
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return '--:--';
+function renderPickLiveTicker(pick,index){
+  const live=getPickLiveState(pick,index), score=getSimulatedPickScore(pick,index,live), verdict=getPickVerdict(pick,index), teams=getPickTeamNames(pick);
+  let status='STARTET BALD', statusClass='pending', meta=getPickDateLabel(live), timeText=`Start ${formatClock(live.start)}`;
+  let result='<div class="pick-live-result pending">◌ NOCH OFFEN</div>';
+  if(live.status==='live'){
+    status=`LIVE · ${live.minute}'`; statusClass='live'; meta=`⏳ Noch ${formatRemaining(live.remaining)}`; timeText=`⏱ Spielminute ${live.minute}'`;
+    result=verdict==='correct'?'<div class="pick-live-result correct">✓ AKTUELL RICHTIG</div>':'<div class="pick-live-result wrong">✕ AKTUELL FALSCH</div>';
+  } else if(live.status==='finished'){
+    status='BEENDET'; statusClass='done'; meta=`🏁 Endstand · ${formatRemaining(0)}`; timeText=`${live.duration} Min. gespielt`;
+    result=verdict==='correct'?'<div class="pick-live-result correct">✓ PICK RICHTIG</div>':'<div class="pick-live-result wrong">✕ PICK FALSCH</div>';
   }
-
-  return date.toLocaleTimeString(
-    'de-DE',
-    {
-      hour: '2-digit',
-      minute: '2-digit'
-    }
-  );
+  return `<div class="pick-live pick-live-${statusClass}">
+    <div class="pick-live-head"><span class="pick-live-dot ${statusClass}">${statusClass==='live'?'● ':''}${status}</span><span>${escapeHtml(pick.sport||'SPORT')}</span></div>
+    <div class="pick-live-score"><span>${escapeHtml(teams.home)}</span><strong>${score[0]} <i>:</i> ${score[1]}</strong><span>${escapeHtml(teams.away)}</span></div>
+    <div class="pick-live-meta"><span>📅 ${escapeHtml(getPickDateLabel(live))}</span><span>${escapeHtml(timeText)}</span></div>
+    ${result}
+    <div class="pick-start">🎯 Tipp <b>${escapeHtml(pick.tip||'—')}</b></div>
+  </div>`;
 }
 
-function countTickerForPick(pickId) {
-  return state.ticker.filter(
-    item =>
-      item.pickId === pickId
-  ).length;
+function renderPicksLiveTicker(){
+  const ticker=document.getElementById('picksLiveTicker'); if(!ticker) return;
+  const picks=Array.isArray(state.picks)?state.picks:[];
+  if(!picks.length){ticker.innerHTML='<div class="picks-ticker-viewport"><div class="picks-ticker-track" style="animation:none"><div class="picks-ticker-set"><div class="picks-live-ticker-item upcoming"><span class="ticker-state">OFFEN</span><strong>Keine veröffentlichten Picks</strong><small>Neue Picks erscheinen hier automatisch.</small></div></div></div></div>';return;}
+  const makeItem=(pick,index)=>{
+    const live=getPickLiveState(pick,index),score=getSimulatedPickScore(pick,index,live),teams=getPickTeamNames(pick);
+    let stateClass='upcoming',label='STARTET BALD',sub=`📅 ${getPickDateLabel(live)}`;
+    if(live.status==='live'){stateClass='live';label=`LIVE · ${live.minute}'`;sub=`${score[0]} : ${score[1]} · ⏳ ${formatRemaining(live.remaining)}`;}
+    else if(live.status==='finished'){stateClass='finished';label='BEENDET';sub=`Endstand ${score[0]} : ${score[1]} · ${getPickDateLabel(live)}`;}
+    return `<div class="picks-live-ticker-item ${stateClass}" data-ticker-index="${index}"><span class="ticker-state">${label}</span><strong class="ticker-match">${escapeHtml(teams.home)} <b>${score[0]}:${score[1]}</b> ${escapeHtml(teams.away)}</strong><small class="ticker-sub">${escapeHtml(sub)}</small></div>`;
+  };
+  const items=picks.map(makeItem).join('');
+  ticker.innerHTML=`<div class="picks-ticker-viewport"><div class="picks-ticker-track"><div class="picks-ticker-set">${items}</div><div class="picks-ticker-set" aria-hidden="true">${items}</div></div></div>`;
 }
 
-function renderPicks() {
-  const grid = $('#pickGrid');
-
-  if (!grid) return;
-
-  if (!state.picks.length) {
-    grid.innerHTML =
-      '<div class="empty">Aktuell keine Picks veröffentlicht.</div>';
-
-    return;
-  }
-
-  grid.innerHTML =
-    state.picks.map(
-      (pick, index) => `
-        <article class="pick-card">
-
-          <div class="pick-top">
-            <span>${escapeHtml(pick.tag)}</span>
-            <small>
-              #${String(index + 1).padStart(2, '0')}
-            </small>
-          </div>
-
-          <small class="pick-sport">
-            ${escapeHtml(pick.sport)}
-          </small>
-
-          <h3>
-            ${escapeHtml(pick.match)}
-          </h3>
-
-          <div class="pick-tip">
-            <span>TIPP</span>
-            <strong>
-              ${escapeHtml(pick.tip)}
-            </strong>
-          </div>
-
-          <p>
-            ${escapeHtml(pick.reason)}
-          </p>
-
-          <div class="pick-bottom">
-            <span>STATUS</span>
-
-            <strong
-              class="pick-status ${statusClass(pick.status)}"
-            >
-              ${escapeHtml(
-                statusLabel(pick.status)
-              )}
-            </strong>
-          </div>
-
-          <div class="pick-status-row">
-            <span>LIVE TRACKING</span>
-
-            <small>
-              ${countTickerForPick(pick.id)}
-              Updates
-            </small>
-          </div>
-
-        </article>
-      `
-    ).join('');
+function updateLivePickTickers(){
+  document.querySelectorAll('[data-pick-live]').forEach(el=>{const i=Number(el.dataset.pickLive),pick=state.picks[i];if(pick)el.innerHTML=renderPickLiveTicker(pick,i);});
+  const ticker=document.getElementById('picksLiveTicker'); if(!ticker) return;
+  const picks=Array.isArray(state.picks)?state.picks:[];
+  const items=ticker.querySelectorAll('.picks-ticker-set:first-child .picks-live-ticker-item'), clones=ticker.querySelectorAll('.picks-ticker-set:nth-child(2) .picks-live-ticker-item');
+  if(items.length!==picks.length||clones.length!==picks.length){renderPicksLiveTicker();return;}
+  const updateItem=(item,pick,index)=>{
+    const live=getPickLiveState(pick,index),score=getSimulatedPickScore(pick,index,live),teams=getPickTeamNames(pick),stateEl=item.querySelector('.ticker-state'),matchEl=item.querySelector('.ticker-match'),subEl=item.querySelector('.ticker-sub');
+    let cls='upcoming',label='STARTET BALD',sub=`📅 ${getPickDateLabel(live)}`;
+    if(live.status==='live'){cls='live';label=`LIVE · ${live.minute}'`;sub=`${score[0]} : ${score[1]} · ⏳ ${formatRemaining(live.remaining)}`;}
+    else if(live.status==='finished'){cls='finished';label='BEENDET';sub=`Endstand ${score[0]} : ${score[1]} · ${getPickDateLabel(live)}`;}
+    item.classList.remove('live','upcoming','finished');item.classList.add(cls);
+    if(stateEl)stateEl.textContent=label;if(matchEl)matchEl.innerHTML=`${escapeHtml(teams.home)} <b>${score[0]}:${score[1]}</b> ${escapeHtml(teams.away)}`;if(subEl)subEl.textContent=sub;
+  };
+  picks.forEach((pick,index)=>{updateItem(items[index],pick,index);updateItem(clones[index],pick,index);});
 }
 
-function renderLiveFeed() {
-  const feed =
-    $('#liveFeed');
-
-  if (!feed) return;
-
-  const items =
-    [...state.ticker]
-      .sort(
-        (a, b) =>
-          new Date(b.timestamp) -
-          new Date(a.timestamp)
-      );
-
-  if (!items.length) {
-    feed.innerHTML =
-      '<div class="live-empty">Noch keine Live-Updates veröffentlicht. Sobald ein Pick aktualisiert wird, erscheint das Update hier.</div>';
-
-    renderTickerBar();
-
-    return;
-  }
-
-  feed.innerHTML =
-    items.map(item => {
-      const pick =
-        getPickById(item.pickId);
-
-      const pickName =
-        pick
-          ? `${pick.match} · ${pick.tip}`
-          : 'WINTIQ Pick';
-
-      return `
-        <article class="live-feed-item">
-
-          <div class="live-feed-time">
-            ${escapeHtml(
-              formatTime(item.timestamp)
-            )}
-          </div>
-
-          <div class="live-feed-main">
-
-            <strong>
-              ${escapeHtml(item.message)}
-            </strong>
-
-            <small>
-              ${escapeHtml(pickName)}
-            </small>
-
-          </div>
-
-          <span
-            class="ticker-status ${statusClass(item.status)}"
-          >
-            ${escapeHtml(
-              statusLabel(item.status)
-            )}
-          </span>
-
-        </article>
-      `;
-    }).join('');
-
-  renderTickerBar();
+function renderPicks(){
+  const grid=$('#pickGrid');if(!grid)return;
+  if(!state.picks.length){grid.innerHTML='<div class="empty">Aktuell keine Picks veröffentlicht.</div>';renderPicksLiveTicker();return;}
+  grid.innerHTML=state.picks.map((pick,index)=>`<article class="pick-card"><div class="pick-card-inner">
+    <div class="pick-top"><span>${escapeHtml(pick.tag||'PICK')}</span><small>#${String(index+1).padStart(2,'0')}</small></div>
+    <small class="pick-sport">${escapeHtml(pick.sport||'SPORT')}</small>
+    <h3>${escapeHtml(pick.match)}</h3>
+    <div class="pick-tip"><span>🎯 TIPP</span><strong>${escapeHtml(pick.tip)}</strong></div>
+    <p>📝 ${escapeHtml(pick.reason)}</p>
+    <div class="pick-bottom"><span>💶 QUOTE</span><strong>${escapeHtml(pick.odd||'—')}</strong></div>
+    <div data-pick-live="${index}">${renderPickLiveTicker(pick,index)}</div>
+  </div></article>`).join('');
+  renderPicksLiveTicker();
 }
-
-function renderTickerBar() {
-  const track =
-    $('#tickerTrack');
-
-  if (!track) return;
-
-  const items =
-    [...state.ticker]
-      .sort(
-        (a, b) =>
-          new Date(b.timestamp) -
-          new Date(a.timestamp)
-      )
-      .slice(0, 8);
-
-  if (!items.length) {
-    track.innerHTML =
-      '<span>WINTIQ <b>LIVE PICK FEED</b></span>';
-
-    return;
-  }
-
-  const content =
-    items.map(item => {
-      const pick =
-        getPickById(item.pickId);
-
-      return `
-        <span>
-          ${escapeHtml(
-            pick?.sport || 'PICK'
-          )}
-          <b>
-            ${escapeHtml(
-              item.message
-            )}
-          </b>
-        </span>
-      `;
-    }).join('');
-
-  track.innerHTML =
-    content + content;
-}
-
 
 /* =========================================================
    GITHUB
    ========================================================= */
 
-function getGitHubHeaders(token) {
+function getGitHubHeaders(
+  token
+) {
+
   return {
+
     Accept:
       'application/vnd.github+json',
 
@@ -630,25 +1939,38 @@ function getGitHubHeaders(token) {
 
     'Content-Type':
       'application/json'
+
   };
+
 }
 
+
 function getGitHubSettings() {
+
   const token =
-    $('#ghToken')?.value.trim() || '';
+    $('#ghToken')
+      ?.value
+      .trim() || '';
+
 
   const repo =
-    $('#ghRepo')?.value.trim() || '';
+    $('#ghRepo')
+      ?.value
+      .trim() || '';
+
 
   const branch =
-    $('#ghBranch')?.value.trim() ||
-    'main';
+    $('#ghBranch')
+      ?.value
+      .trim() || 'main';
+
 
   return {
     token,
     repo,
     branch
   };
+
 }
 
 
@@ -658,14 +1980,24 @@ function getGitHubSettings() {
 
 async function testGitHubToken() {
 
-  const status =
-    $('#ghStatus');
+  if (!isAdmin()) {
+
+    showToast(
+      'Keine Berechtigung.'
+    );
+
+    return;
+
+  }
+
 
   const {
     token,
     repo,
     branch
-  } = getGitHubSettings();
+  } =
+    getGitHubSettings();
+
 
   if (!token) {
 
@@ -675,7 +2007,9 @@ async function testGitHubToken() {
     );
 
     return;
+
   }
+
 
   if (
     !repo ||
@@ -688,20 +2022,27 @@ async function testGitHubToken() {
     );
 
     return;
+
   }
+
 
   setGitHubStatus(
     'GitHub-Zugang wird geprüft …',
     'loading'
   );
 
+
   try {
 
     const headers =
-      getGitHubHeaders(token);
+      getGitHubHeaders(
+        token
+      );
+
 
     const repoApi =
       `https://api.github.com/repos/${repo}`;
+
 
     const repoResponse =
       await fetch(
@@ -712,17 +2053,22 @@ async function testGitHubToken() {
         }
       );
 
+
     const repoData =
       await repoResponse
         .json()
         .catch(() => ({}));
 
+
     if (!repoResponse.ok) {
+
       throw new Error(
         repoData.message ||
         `GitHub Fehler ${repoResponse.status}`
       );
+
     }
+
 
     if (
       repoData.permissions &&
@@ -730,12 +2076,15 @@ async function testGitHubToken() {
     ) {
 
       throw new Error(
-        'Der Token kann dieses Repository lesen, aber nicht schreiben. Prüfe "Contents: Read and write".'
+        'Der Token kann dieses Repository lesen, aber nicht schreiben.'
       );
+
     }
+
 
     const fileApi =
       `https://api.github.com/repos/${repo}/contents/picks.json?ref=${encodeURIComponent(branch)}`;
+
 
     const fileResponse =
       await fetch(
@@ -746,22 +2095,28 @@ async function testGitHubToken() {
         }
       );
 
+
     const fileData =
       await fileResponse
         .json()
         .catch(() => ({}));
 
+
     if (!fileResponse.ok) {
+
       throw new Error(
         fileData.message ||
         `picks.json konnte nicht gelesen werden (${fileResponse.status})`
       );
+
     }
+
 
     setGitHubStatus(
       `✓ GitHub funktioniert. Repository und picks.json auf "${branch}" sind erreichbar.`,
       'ok'
     );
+
 
   } catch (error) {
 
@@ -770,12 +2125,16 @@ async function testGitHubToken() {
       error
     );
 
+
     setGitHubStatus(
       `✕ ${error.message}`,
       'error'
     );
+
   }
+
 }
+
 
 function setGitHubStatus(
   message,
@@ -785,13 +2144,17 @@ function setGitHubStatus(
   const status =
     $('#ghStatus');
 
-  if (!status) return;
+  if (!status) {
+    return;
+  }
+
 
   status.textContent =
     message;
 
   status.className =
     `github-status ${type}`;
+
 }
 
 
@@ -801,14 +2164,28 @@ function setGitHubStatus(
 
 async function publishPicksToGitHub() {
 
+  if (!isAdmin()) {
+
+    showToast(
+      'Keine Berechtigung.'
+    );
+
+    return;
+
+  }
+
+
   const btn =
     $('#publishGitHub');
+
 
   const {
     token,
     repo,
     branch
-  } = getGitHubSettings();
+  } =
+    getGitHubSettings();
+
 
   if (!token) {
 
@@ -822,7 +2199,9 @@ async function publishPicksToGitHub() {
     );
 
     return;
+
   }
+
 
   if (
     !repo ||
@@ -833,13 +2212,10 @@ async function publishPicksToGitHub() {
       'Repository ist ungültig.'
     );
 
-    setGitHubStatus(
-      'Repository muss z.B. bodycam1212-lab/axenvo-bet sein.',
-      'error'
-    );
-
     return;
+
   }
+
 
   if (btn) {
 
@@ -847,25 +2223,27 @@ async function publishPicksToGitHub() {
 
     btn.textContent =
       'Wird veröffentlicht …';
+
   }
+
 
   setGitHubStatus(
     'Picks werden zu GitHub gesendet …',
     'loading'
   );
 
+
   try {
 
     const headers =
-      getGitHubHeaders(token);
+      getGitHubHeaders(
+        token
+      );
+
 
     const api =
       `https://api.github.com/repos/${repo}/contents/picks.json`;
 
-    /*
-      Zuerst aktuellen Stand von picks.json holen,
-      damit wir dessen SHA beim Update mitsenden können.
-    */
 
     const currentResponse =
       await fetch(
@@ -876,7 +2254,9 @@ async function publishPicksToGitHub() {
         }
       );
 
+
     let sha = null;
+
 
     if (currentResponse.ok) {
 
@@ -895,34 +2275,31 @@ async function publishPicksToGitHub() {
           .json()
           .catch(() => ({}));
 
+
       throw new Error(
         errorData.message ||
         `GitHub Fehler ${currentResponse.status}`
       );
+
     }
 
-    /*
-      AKTUELLEN ADMIN-STATE verwenden.
-    */
 
     const content =
       JSON.stringify(
         {
           picks:
-            state.picks,
-
-          ticker:
-            state.ticker,
-
-          updatedAt:
-            new Date().toISOString()
+            state.picks
         },
         null,
         2
       ) + '\n';
 
+
     const encodedContent =
-      utf8ToBase64(content);
+      utf8ToBase64(
+        content
+      );
+
 
     const body = {
 
@@ -934,17 +2311,17 @@ async function publishPicksToGitHub() {
 
       branch:
         branch
+
     };
 
-    /*
-      Beim Ändern einer bestehenden Datei
-      muss der SHA mitgesendet werden.
-    */
 
     if (sha) {
+
       body.sha =
         sha;
+
     }
+
 
     const response =
       await fetch(
@@ -957,10 +2334,12 @@ async function publishPicksToGitHub() {
         }
       );
 
+
     const result =
       await response
         .json()
         .catch(() => ({}));
+
 
     if (!response.ok) {
 
@@ -968,13 +2347,16 @@ async function publishPicksToGitHub() {
         result.message ||
         `GitHub Fehler ${response.status}`;
 
+
       if (
         response.status === 401
       ) {
 
         message =
           'GitHub Token ist ungültig oder abgelaufen.';
+
       }
+
 
       if (
         response.status === 403
@@ -982,8 +2364,10 @@ async function publishPicksToGitHub() {
 
         message =
           result.message ||
-          'GitHub verweigert den Schreibzugriff. Prüfe Contents: Read and write.';
+          'GitHub verweigert den Schreibzugriff.';
+
       }
+
 
       if (
         response.status === 409
@@ -991,49 +2375,42 @@ async function publishPicksToGitHub() {
 
         message =
           'GitHub meldet einen Konflikt. Bitte erneut versuchen.';
+
       }
 
-      if (
-        response.status === 422
-      ) {
-
-        message =
-          result.message ||
-          'GitHub konnte die Datei nicht aktualisieren.';
-      }
 
       throw new Error(
         message
       );
+
     }
 
-    /*
-      Token nach erfolgreicher Veröffentlichung
-      aus dem Eingabefeld entfernen.
-    */
 
-    $('#ghToken').value = '';
+    const tokenInput =
+      $('#ghToken');
+
+
+    if (tokenInput) {
+      tokenInput.value = '';
+    }
+
 
     setGitHubStatus(
       '✓ Picks erfolgreich zu GitHub gesendet.',
       'ok'
     );
 
+
     showToast(
       'Picks erfolgreich zu GitHub gesendet ✓'
     );
 
-    /*
-      Kurz warten, damit GitHub Pages / Actions
-      Zeit zum Aktualisieren bekommt.
-    */
 
     setTimeout(
-      () => {
-        loadPublishedPicks();
-      },
+      loadPublishedPicks,
       1200
     );
+
 
   } catch (error) {
 
@@ -1042,14 +2419,17 @@ async function publishPicksToGitHub() {
       error
     );
 
+
     setGitHubStatus(
       `✕ ${error.message}`,
       'error'
     );
 
+
     showToast(
       `Fehler: ${error.message}`
     );
+
 
   } finally {
 
@@ -1059,8 +2439,11 @@ async function publishPicksToGitHub() {
 
       btn.textContent =
         'Picks zu GitHub senden';
+
     }
+
   }
+
 }
 
 
@@ -1071,17 +2454,24 @@ async function publishPicksToGitHub() {
 async function loadPublishedPicks() {
 
   const repo =
-    $('#ghRepo')?.value.trim() ||
+    $('#ghRepo')
+      ?.value
+      .trim() ||
     'bodycam1212-lab/axenvo-bet';
 
+
   const branch =
-    $('#ghBranch')?.value.trim() ||
+    $('#ghBranch')
+      ?.value
+      .trim() ||
     'main';
+
 
   try {
 
     const api =
       `https://api.github.com/repos/${repo}/contents/picks.json?ref=${encodeURIComponent(branch)}`;
+
 
     const response =
       await fetch(
@@ -1102,20 +2492,28 @@ async function loadPublishedPicks() {
         }
       );
 
+
     if (!response.ok) {
+
       throw new Error(
         `picks.json konnte nicht geladen werden (${response.status})`
       );
+
     }
+
 
     const data =
       await response.json();
 
+
     if (!data.content) {
+
       throw new Error(
         'GitHub hat keinen Dateiinhalt geliefert.'
       );
+
     }
+
 
     const binary =
       atob(
@@ -1125,6 +2523,7 @@ async function loadPublishedPicks() {
         )
       );
 
+
     const bytes =
       Uint8Array.from(
         binary,
@@ -1132,44 +2531,33 @@ async function loadPublishedPicks() {
           char.charCodeAt(0)
       );
 
+
     const content =
-      new TextDecoder().decode(
-        bytes
-      );
+      new TextDecoder()
+        .decode(bytes);
+
 
     const remote =
-      JSON.parse(content);
+      JSON.parse(
+        content
+      );
+
 
     if (
       Array.isArray(
         remote.picks
       )
     ) {
+
       state.picks =
         remote.picks;
+
+      saveState();
+
+      renderPicks();
+
     }
 
-    if (
-      Array.isArray(
-        remote.ticker
-      )
-    ) {
-      state.ticker =
-        remote.ticker;
-    }
-
-    saveState();
-
-    renderPicks();
-    renderLiveFeed();
-
-    if (
-      !$('#adminPanel')
-        ?.classList
-        .contains('hidden')
-    ) {
-      fillAdminForm();
-    }
 
   } catch (error) {
 
@@ -1177,8 +2565,12 @@ async function loadPublishedPicks() {
       'Remote picks konnten nicht geladen werden:',
       error
     );
+
   }
+
 }
+
+
 /* =========================================================
    ADMIN
    ========================================================= */
@@ -1188,30 +2580,46 @@ function openAdmin() {
   if (!isAdmin()) {
 
     showToast(
-      'Nur der Admin kann das Control Room öffnen.'
+      'Kein Zugriff auf den Admin-Bereich.'
     );
 
     return;
+
   }
+
 
   const panel =
     $('#adminPanel');
 
-  if (!panel) return;
+  if (!panel) {
+    return;
+  }
+
 
   fillAdminForm();
 
   panel.classList.remove(
     'hidden'
   );
+
+
+  /*
+    Beim Öffnen des Admin-Bereichs
+    direkt das Postfach aktualisieren.
+  */
+
+  loadPasswordRequests();
+
 }
+
 
 function closeAdmin() {
 
   $('#adminPanel')
-    ?.classList
-    .add('hidden');
+    ?.classList.add('hidden');
+
 }
+
 
 function fillAdminForm() {
 
@@ -1219,29 +2627,36 @@ function fillAdminForm() {
 
     $('#aHeroTitle').value =
       state.heroTitle;
+
   }
+
 
   if ($('#aHeroText')) {
 
     $('#aHeroText').value =
       state.heroText;
+
   }
+
 
   if ($('#aRelease')) {
 
     $('#aRelease').value =
       state.release;
+
   }
+
 
   if ($('#aPulse')) {
 
     $('#aPulse').value =
       state.pulse;
+
   }
 
+
   renderAdminPicks();
-  renderTickerPickOptions();
-  renderAdminTicker();
+
 }
 
 
@@ -1254,136 +2669,122 @@ function renderAdminPicks() {
   const container =
     $('#adminPicks');
 
-  if (!container) return;
+  if (!container) {
+    return;
+  }
+
 
   container.innerHTML =
-    state.picks.map(
-      (pick, index) => `
+    state.picks
+      .map(
+        (pick, index) => `
 
-        <div class="admin-pick">
+          <div class="admin-pick">
 
-          <div class="admin-pick-head">
+            <div class="admin-pick-head">
 
-            <strong>
-              Pick ${index + 1}
-            </strong>
+              <strong>
+                Pick ${index + 1}
+              </strong>
 
-            <button
-              type="button"
-              class="ghost remove-pick"
-              data-index="${index}"
-            >
-              Entfernen
-            </button>
+              <button
+                type="button"
+                class="ghost remove-pick"
+                data-index="${index}"
+              >
+                Entfernen
+              </button>
+
+            </div>
+
+
+            <div class="admin-pick-grid">
+
+              <label>
+
+                Sport
+
+                <input
+                  data-field="sport"
+                  data-index="${index}"
+                  value="${escapeHtml(pick.sport)}"
+                >
+
+              </label>
+
+
+              <label>
+
+                Tag
+
+                <input
+                  data-field="tag"
+                  data-index="${index}"
+                  value="${escapeHtml(pick.tag)}"
+                >
+
+              </label>
+
+
+              <label class="full">
+
+                Match
+
+                <input
+                  data-field="match"
+                  data-index="${index}"
+                  value="${escapeHtml(pick.match)}"
+                >
+
+              </label>
+
+
+              <label>
+
+                Tipp
+
+                <input
+                  data-field="tip"
+                  data-index="${index}"
+                  value="${escapeHtml(pick.tip)}"
+                >
+
+              </label>
+
+
+              <label>
+
+                Quote
+
+                <input
+                  data-field="odd"
+                  data-index="${index}"
+                  value="${escapeHtml(pick.odd)}"
+                >
+
+              </label>
+
+
+              <label class="full">
+
+                🧠 Einschätzung
+
+                <textarea
+                  data-field="reason"
+                  data-index="${index}"
+                  rows="3"
+                  placeholder="WINTIQ-Einschätzung eingeben ..."
+                >${escapeHtml(pick.reason)}</textarea>
+
+              </label>
+
+            </div>
 
           </div>
 
-          <div class="admin-pick-grid">
-
-            <label>
-              Sport
-
-              <input
-                data-field="sport"
-                data-index="${index}"
-                value="${escapeHtml(
-                  pick.sport
-                )}"
-              >
-            </label>
-
-            <label>
-              Tag
-
-              <input
-                data-field="tag"
-                data-index="${index}"
-                value="${escapeHtml(
-                  pick.tag
-                )}"
-              >
-            </label>
-
-            <label class="full">
-              Match
-
-              <input
-                data-field="match"
-                data-index="${index}"
-                value="${escapeHtml(
-                  pick.match
-                )}"
-              >
-            </label>
-
-            <label>
-              Tipp
-
-              <input
-                data-field="tip"
-                data-index="${index}"
-                value="${escapeHtml(
-                  pick.tip
-                )}"
-              >
-            </label>
-
-            <label>
-              Status
-
-              <select
-                data-field="status"
-                data-index="${index}"
-              >
-
-                ${
-                  [
-                    'COMING',
-                    'LIVE',
-                    'WON',
-                    'LOST',
-                    'VOID'
-                  ]
-                    .map(
-                      status =>
-                        `<option
-                          value="${status}"
-                          ${
-                            pick.status === status
-                              ? 'selected'
-                              : ''
-                          }
-                        >
-                          ${status}
-                        </option>`
-                    )
-                    .join('')
-                }
-
-              </select>
-
-            </label>
-
-            <label class="full">
-              🧠 Einschätzung
-
-              <textarea
-                data-field="reason"
-                data-index="${index}"
-                rows="3"
-                placeholder="WINTIQ-Einschätzung eingeben ..."
-              >${escapeHtml(
-                pick.reason
-              )}</textarea>
-
-            </label>
-
-          </div>
-
-        </div>
-
-      `
-    ).join('');
+        `
+      )
+      .join('');
 
 
   container
@@ -1398,15 +2799,13 @@ function renderAdminPicks() {
 
           const index =
             Number(
-              event.target
-                .dataset
-                .index
+              event.target.dataset.index
             );
 
+
           const field =
-            event.target
-              .dataset
-              .field;
+            event.target.dataset.field;
+
 
           if (
             state.picks[index] &&
@@ -1415,9 +2814,12 @@ function renderAdminPicks() {
 
             state.picks[index][field] =
               event.target.value;
+
           }
+
         }
       );
+
     });
 
 
@@ -1436,266 +2838,20 @@ function renderAdminPicks() {
               button.dataset.index
             );
 
-          const removed =
-            state.picks[index];
 
           state.picks.splice(
             index,
             1
           );
 
-          if (removed) {
-
-            state.ticker =
-              state.ticker.filter(
-                item =>
-                  item.pickId !==
-                  removed.id
-              );
-          }
 
           renderAdminPicks();
-          renderTickerPickOptions();
-          renderAdminTicker();
-          renderLiveFeed();
-          renderPicks();
+
         }
       );
+
     });
-}
 
-
-/* =========================================================
-   ADMIN LIVE TICKER
-   ========================================================= */
-
-function renderTickerPickOptions() {
-
-  const select =
-    $('#tickerPick');
-
-  if (!select) return;
-
-  if (!state.picks.length) {
-
-    select.innerHTML =
-      '<option value="">Keine Picks vorhanden</option>';
-
-    return;
-  }
-
-  const current =
-    select.value;
-
-  select.innerHTML =
-    state.picks
-      .map(
-        (pick, index) =>
-          `<option value="${escapeHtml(
-            pick.id
-          )}">
-            #${String(
-              index + 1
-            ).padStart(2, '0')}
-            ·
-            ${escapeHtml(
-              pick.match
-            )}
-          </option>`
-      )
-      .join('');
-
-  if (
-    current &&
-    state.picks.some(
-      pick =>
-        pick.id === current
-    )
-  ) {
-    select.value =
-      current;
-  }
-}
-
-function renderAdminTicker() {
-
-  const container =
-    $('#adminTicker');
-
-  if (!container) return;
-
-  const items =
-    [...state.ticker]
-      .sort(
-        (a, b) =>
-          new Date(b.timestamp) -
-          new Date(a.timestamp)
-      );
-
-  if (!items.length) {
-
-    container.innerHTML =
-      '<div class="empty">Noch keine Live-Updates.</div>';
-
-    return;
-  }
-
-  container.innerHTML =
-    items.map(item => {
-
-      const pick =
-        getPickById(
-          item.pickId
-        );
-
-      return `
-
-        <div class="admin-ticker-item">
-
-          <div>
-
-            <strong>
-              ${escapeHtml(
-                item.message
-              )}
-            </strong>
-
-            <small>
-              ${escapeHtml(
-                pick?.match ||
-                'Pick'
-              )}
-
-              ·
-
-              ${escapeHtml(
-                formatTime(
-                  item.timestamp
-                )
-              )}
-
-              ·
-
-              ${escapeHtml(
-                statusLabel(
-                  item.status
-                )
-              )}
-            </small>
-
-          </div>
-
-          <button
-            type="button"
-            class="ghost admin-ticker-remove"
-            data-ticker-id="${escapeHtml(
-              item.id
-            )}"
-          >
-            Entfernen
-          </button>
-
-        </div>
-
-      `;
-
-    }).join('');
-
-
-  container
-    .querySelectorAll(
-      '.admin-ticker-remove'
-    )
-    .forEach(button => {
-
-      button.addEventListener(
-        'click',
-        () => {
-
-          state.ticker =
-            state.ticker.filter(
-              item =>
-                item.id !==
-                button.dataset
-                  .tickerId
-            );
-
-          renderAdminTicker();
-          renderLiveFeed();
-          renderPicks();
-        }
-      );
-    });
-}
-
-function addTickerEntry() {
-
-  if (!isAdmin()) return;
-
-  const pickId =
-    $('#tickerPick')
-      ?.value || '';
-
-  const status =
-    $('#tickerStatus')
-      ?.value || 'LIVE';
-
-  const message =
-    $('#tickerMessage')
-      ?.value
-      .trim() || '';
-
-  if (!pickId) {
-
-    return showToast(
-      'Bitte zuerst einen Pick auswählen.'
-    );
-  }
-
-  if (!message) {
-
-    return showToast(
-      'Bitte ein Live-Update eingeben.'
-    );
-  }
-
-  state.ticker.unshift({
-
-    id:
-      `ticker-${Date.now()}-${Math.random()
-        .toString(16)
-        .slice(2)}`,
-
-    pickId,
-
-    message,
-
-    status,
-
-    timestamp:
-      new Date().toISOString()
-  });
-
-  const pick =
-    getPickById(
-      pickId
-    );
-
-  if (pick) {
-    pick.status =
-      status;
-  }
-
-  $('#tickerMessage').value =
-    '';
-
-  renderAdminTicker();
-  renderLiveFeed();
-  renderPicks();
-
-  showToast(
-    'Live-Update hinzugefügt ✓'
-  );
 }
 
 
@@ -1705,10 +2861,18 @@ function addTickerEntry() {
 
 function addPick() {
 
-  state.picks.push({
+  if (!isAdmin()) {
 
-    id:
-      `pick-${Date.now()}`,
+    showToast(
+      'Keine Berechtigung.'
+    );
+
+    return;
+
+  }
+
+
+  state.picks.push({
 
     sport:
       'FUSSBALL',
@@ -1726,13 +2890,13 @@ function addPick() {
       'NEW',
 
     odd:
-      '',
+      '1.90'
 
-    status:
-      'COMING'
   });
 
+
   renderAdminPicks();
+
 }
 
 
@@ -1742,32 +2906,52 @@ function addPick() {
 
 function saveAdmin() {
 
+  if (!isAdmin()) {
+
+    showToast(
+      'Keine Berechtigung.'
+    );
+
+    return;
+
+  }
+
+
   state.heroTitle =
     $('#aHeroTitle')?.value ||
     DEFAULTS.heroTitle;
+
 
   state.heroText =
     $('#aHeroText')?.value ||
     DEFAULTS.heroText;
 
+
   state.release =
     $('#aRelease')?.value ||
     DEFAULTS.release;
+
 
   state.pulse =
     $('#aPulse')?.value ||
     DEFAULTS.pulse;
 
+
   saveState();
 
+
   renderHero();
+
   renderPicks();
+
 
   showToast(
     'Änderungen lokal gespeichert ✓'
   );
 
+
   closeAdmin();
+
 }
 
 
@@ -1777,12 +2961,27 @@ function saveAdmin() {
 
 function resetAdmin() {
 
+  if (!isAdmin()) {
+
+    showToast(
+      'Keine Berechtigung.'
+    );
+
+    return;
+
+  }
+
+
   const confirmed =
     confirm(
       'Demo wirklich zurücksetzen?'
     );
 
-  if (!confirmed) return;
+
+  if (!confirmed) {
+    return;
+  }
+
 
   state =
     JSON.parse(
@@ -1791,16 +2990,21 @@ function resetAdmin() {
       )
     );
 
+
   saveState();
 
+
   renderHero();
+
   renderPicks();
 
   fillAdminForm();
 
+
   showToast(
     'Demo wurde zurückgesetzt.'
   );
+
 }
 
 
@@ -1816,12 +3020,16 @@ function initMobile() {
   const hamburger =
     $('#hamb');
 
+
   if (
     !mobile ||
     !hamburger
   ) {
+
     return;
+
   }
+
 
   hamburger.addEventListener(
     'click',
@@ -1830,8 +3038,10 @@ function initMobile() {
       mobile.classList.toggle(
         'open'
       );
+
     }
   );
+
 
   mobile
     .querySelectorAll('a')
@@ -1844,9 +3054,55 @@ function initMobile() {
           mobile.classList.remove(
             'open'
           );
+
         }
       );
+
     });
+
+}
+
+
+/* =========================================================
+   SPORT FILTER
+   ========================================================= */
+
+function initFilters() {
+
+  document
+    .querySelectorAll('.chip')
+    .forEach(chip => {
+
+      chip.addEventListener(
+        'click',
+        () => {
+
+          document
+            .querySelectorAll('.chip')
+            .forEach(item => {
+
+              item.classList.remove(
+                'active'
+              );
+
+            });
+
+
+          chip.classList.add(
+            'active'
+          );
+
+
+          renderMatches(
+            chip.dataset.sport ||
+            'all'
+          );
+
+        }
+      );
+
+    });
+
 }
 
 
@@ -1862,11 +3118,13 @@ function initAdmin() {
       openAdmin
     );
 
+
   $('#adminClose')
     ?.addEventListener(
       'click',
       closeAdmin
     );
+
 
   $('#addPick')
     ?.addEventListener(
@@ -1874,11 +3132,13 @@ function initAdmin() {
       addPick
     );
 
+
   $('#saveAdmin')
     ?.addEventListener(
       'click',
       saveAdmin
     );
+
 
   $('#resetAdmin')
     ?.addEventListener(
@@ -1886,11 +3146,13 @@ function initAdmin() {
       resetAdmin
     );
 
+
   $('#testGitHub')
     ?.addEventListener(
       'click',
       testGitHubToken
     );
+
 
   $('#publishGitHub')
     ?.addEventListener(
@@ -1898,11 +3160,13 @@ function initAdmin() {
       publishPicksToGitHub
     );
 
-  $('#addTicker')
+
+  $('#refreshPasswordRequests')
     ?.addEventListener(
       'click',
-      addTickerEntry
+      loadPasswordRequests
     );
+
 
   $('#adminPanel')
     ?.addEventListener(
@@ -1915,24 +3179,72 @@ function initAdmin() {
         ) {
 
           closeAdmin();
+
         }
+
       }
     );
+
 }
 
 
 /* =========================================================
-   LIVE REFRESH
+   RESET EVENTS
    ========================================================= */
 
-function startLiveRefresh() {
+function initResetEvents() {
 
-  setInterval(
-    () => {
-      loadPublishedPicks();
-    },
-    15000
-  );
+  $('#resetClose')
+    ?.addEventListener(
+      'click',
+      closeResetModal
+    );
+
+
+  $('#sendResetRequest')
+    ?.addEventListener(
+      'click',
+      requestPasswordReset
+    );
+
+
+  $('#resetModal')
+    ?.addEventListener(
+      'click',
+      event => {
+
+        if (
+          event.target.id ===
+          'resetModal'
+        ) {
+
+          closeResetModal();
+
+        }
+
+      }
+    );
+
+
+  $('#resetUsername')
+    ?.addEventListener(
+      'keydown',
+      event => {
+
+        if (
+          event.key ===
+          'Enter'
+        ) {
+
+          event.preventDefault();
+
+          requestPasswordReset();
+
+        }
+
+      }
+    );
+
 }
 
 
@@ -1940,14 +3252,33 @@ function startLiveRefresh() {
    START
    ========================================================= */
 
+function removeLegacySportsUI(){
+  // Remove every known legacy market/ticker/betslip node before anything is rendered.
+  const selectors=[
+    '.ticker','.top-ticker','.sports','.live-section','.sports-filter',
+    '.market-section','.bet-slip','.betslip','#betSlip','#sports','#live',
+    '[class*="bet-slip"]','[id*="bet-slip"]','[class*="sports-filter"]',
+    '[class*="market-section"]'
+  ];
+  document.querySelectorAll(selectors.join(',')).forEach(el=>el.remove());
+
+  // A previous cached script could have inserted the old top ticker.
+  // Remove it again after a short delay as a defensive cleanup.
+  window.setTimeout(()=>{
+    document.querySelectorAll(selectors.join(',')).forEach(el=>el.remove());
+  },50);
+}
+
 function init() {
 
+  removeLegacySportsUI();
   initLogin();
+
+  initResetEvents();
 
   renderHero();
 
   renderPicks();
-  renderLiveFeed();
 
   initMobile();
 
@@ -1955,19 +3286,26 @@ function init() {
 
   updateCountdown();
 
+
   setInterval(
-    updateCountdown,
+    () => {
+      updateCountdown();
+      removeLegacySportsUI();
+      updateLivePickTickers();
+    },
     1000
   );
+
 
   /*
     picks.json beim Laden aktualisieren.
   */
 
   loadPublishedPicks();
+  window.setInterval(loadPublishedPicks, 20000);
 
-  startLiveRefresh();
 }
+
 
 document.addEventListener(
   'DOMContentLoaded',
