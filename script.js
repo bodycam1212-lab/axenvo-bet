@@ -1,5 +1,5 @@
 /* =========================================================
-   WINTIQ
+   WINTIQ BET
    Frontend Demo + GitHub Picks Publishing
    + Password Reset Inbox
    ========================================================= */
@@ -1782,94 +1782,7 @@ function updateCountdown() {
 
 
 /* =========================================================
-   LIVE MATCHES
-   ========================================================= */
-
-const MATCHES = [
-  {
-    sport: 'football',
-    league: 'BUNDESLIGA',
-    time: "LIVE 68'",
-    home: 'FC Bayern',
-    away: 'Dortmund',
-    score: ['2', '1'],
-    odds: ['1.78', '3.90', '4.40']
-  },
-  {
-    sport: 'football',
-    league: 'CHAMPIONS LEAGUE',
-    time: '19:30',
-    home: 'Real Madrid',
-    away: 'Barcelona',
-    score: ['0', '0'],
-    odds: ['2.05', '3.50', '3.20']
-  },
-  {
-    sport: 'tennis',
-    league: 'ATP',
-    time: '19:30',
-    home: 'Spieler A',
-    away: 'Spieler B',
-    score: ['1', '0'],
-    odds: ['1.65', '2.20']
-  },
-  {
-    sport: 'basketball',
-    league: 'NBA',
-    time: '21:00',
-    home: 'Lakers',
-    away: 'Celtics',
-    score: ['0', '0'],
-    odds: ['1.92', '1.88']
-  }
-];
-
-function renderMatches(filter = 'all') {
-  const container = $('#matches');
-  if (!container) return;
-
-  const matches = filter === 'all'
-    ? MATCHES
-    : MATCHES.filter(match => match.sport === filter);
-
-  container.innerHTML = matches.map(match => {
-    const oddsHtml = match.odds.map(odd => `
-      <button class="odd" type="button" data-odd="${escapeHtml(odd)}">
-        ${escapeHtml(odd)}
-      </button>
-    `).join('');
-
-    return `
-      <article class="match-card">
-        <div class="match-top">
-          <small>${escapeHtml(match.league)}</small>
-          <span>${escapeHtml(match.time)}</span>
-        </div>
-        <div class="match-teams">
-          <div>
-            <strong>${escapeHtml(match.home)}</strong>
-            <strong>${escapeHtml(match.away)}</strong>
-          </div>
-          <div class="score">
-            <b>${escapeHtml(match.score[0])}</b>
-            <span>:</span>
-            <b>${escapeHtml(match.score[1])}</b>
-          </div>
-        </div>
-        <div class="odds">${oddsHtml}</div>
-      </article>
-    `;
-  }).join('');
-
-  container.querySelectorAll('.odd').forEach(button => {
-    button.addEventListener('click', () => {
-      showToast(`Quote ${button.dataset.odd} ausgewählt`);
-    });
-  });
-}
-
-/* =========================================================
-   LIVE PICK TICKER
+   LIVE PICK TRACKING + PICKS
    ========================================================= */
 
 function getPickLiveState(pick, index) {
@@ -1878,277 +1791,100 @@ function getPickLiveState(pick, index) {
     '2026-09-12T15:30:00+02:00',
     '2026-09-12T18:00:00+02:00'
   ];
-
   const rawStart = pick.startAt || fallbackStarts[index % fallbackStarts.length];
   const start = new Date(rawStart).getTime();
   const duration = Math.max(60, Number(pick.durationMinutes) || 105);
   const end = start + duration * 60 * 1000;
   const now = Date.now();
-
-  if (!Number.isFinite(start)) {
-    return { status: 'unknown', start: NaN, end: NaN, duration, elapsed: 0, minute: 0 };
-  }
-
-  if (now < start) {
-    return { status: 'upcoming', start, end, duration, elapsed: 0, minute: 0 };
-  }
-
-  if (now >= end) {
-    return { status: 'finished', start, end, duration, elapsed: duration, minute: duration };
-  }
-
-  const elapsed = Math.floor((now - start) / 60000);
-  return {
-    status: 'live',
-    start,
-    end,
-    duration,
-    elapsed,
-    minute: Math.max(1, elapsed + 1)
-  };
+  if (!Number.isFinite(start)) return {status:'unknown',start:NaN,end:NaN,duration,elapsed:0,minute:0};
+  if (now < start) return {status:'upcoming',start,end,duration,elapsed:0,minute:0};
+  if (now >= end) return {status:'finished',start,end,duration,elapsed:duration,minute:duration};
+  const elapsed = Math.floor((now-start)/60000);
+  return {status:'live',start,end,duration,elapsed,minute:Math.max(1,elapsed+1)};
 }
 
-function getSimulatedPickScore(pick, index, liveState) {
-  const seed = `${pick.match || ''}|${pick.tip || ''}|${index}`;
-  let hash = 0;
-
-  for (let i = 0; i < seed.length; i++) {
-    hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
-  }
-
-  hash = Math.abs(hash);
-
-  if (liveState.status === 'upcoming' || liveState.status === 'unknown') {
-    return [0, 0];
-  }
-
-  const progress = liveState.status === 'finished'
-    ? 1
-    : Math.min(1, liveState.elapsed / Math.max(1, liveState.duration));
-
-  const home = Math.min(5, Math.floor(progress * (hash % 4 + 1)));
-  const away = Math.min(5, Math.floor(progress * ((hash >> 3) % 3 + 1)));
-
-  return [home, away];
+function getSimulatedPickScore(pick,index,liveState){
+  const seed=`${pick.match||''}|${pick.tip||''}|${index}`;
+  let hash=0;
+  for(let i=0;i<seed.length;i++) hash=((hash<<5)-hash+seed.charCodeAt(i))|0;
+  hash=Math.abs(hash);
+  if(liveState.status==='upcoming'||liveState.status==='unknown') return [0,0];
+  const progress=liveState.status==='finished'?1:Math.min(1,liveState.elapsed/Math.max(1,liveState.duration));
+  return [Math.min(5,Math.floor(progress*(hash%4+1))),Math.min(5,Math.floor(progress*((hash>>3)%3+1)))];
 }
 
-function getPickVerdict(pick, index) {
-  const live = getPickLiveState(pick, index);
-
-  if (live.status === 'upcoming' || live.status === 'unknown') {
-    return 'pending';
-  }
-
-  const [home, away] = getSimulatedPickScore(pick, index, live);
-  const tip = String(pick.tip || '').toLowerCase();
-
-  if (tip.includes('unentschieden') || tip.includes('draw')) {
-    return home === away ? 'correct' : 'wrong';
-  }
-
-  if (tip.includes('auswärt') || tip.includes('away')) {
-    return away > home ? 'correct' : 'wrong';
-  }
-
-  if (tip.includes('over') || tip.includes('mehr')) {
-    return home + away >= 3 ? 'correct' : 'wrong';
-  }
-
-  if (tip.includes('under') || tip.includes('weniger')) {
-    return home + away < 3 ? 'correct' : 'wrong';
-  }
-
-  return home > away ? 'correct' : 'wrong';
+function getPickVerdict(pick,index){
+  const live=getPickLiveState(pick,index);
+  if(live.status==='upcoming'||live.status==='unknown') return 'pending';
+  const [home,away]=getSimulatedPickScore(pick,index,live);
+  const tip=String(pick.tip||'').toLowerCase();
+  if(tip.includes('unentschieden')||tip.includes('draw')) return home===away?'correct':'wrong';
+  if(tip.includes('auswärt')||tip.includes('away')) return away>home?'correct':'wrong';
+  if(tip.includes('over')||tip.includes('mehr')) return home+away>=3?'correct':'wrong';
+  if(tip.includes('under')||tip.includes('weniger')) return home+away<3?'correct':'wrong';
+  return home>away?'correct':'wrong';
 }
 
-function formatPickStart(start) {
-  if (!Number.isFinite(start)) return 'Startzeit nicht festgelegt';
-
-  return new Date(start).toLocaleString('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+function formatPickStart(start){
+  if(!Number.isFinite(start)) return 'Startzeit nicht festgelegt';
+  return new Date(start).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
 }
 
-function formatRemaining(ms) {
-  if (!Number.isFinite(ms) || ms <= 0) return '0:00';
+function formatRemaining(ms){
+  if(!Number.isFinite(ms)||ms<=0) return '0:00';
+  const total=Math.ceil(ms/1000),h=Math.floor(total/3600),m=Math.floor((total%3600)/60),sec=total%60;
+  return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`:`${m}:${String(sec).padStart(2,'0')}`;
+}
 
-  const totalSeconds = Math.ceil(ms / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
+function getPickTeamNames(pick){
+  const parts=String(pick.match||'').split(/\s+[—–-]\s+/);
+  return {home:parts[0]?.trim()||'Team A',away:parts[1]?.trim()||'Team B'};
+}
 
-  if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+function renderPickLiveTicker(pick,index){
+  const live=getPickLiveState(pick,index);
+  const score=getSimulatedPickScore(pick,index,live);
+  const verdict=getPickVerdict(pick,index);
+  const teams=getPickTeamNames(pick);
+  let status='STARTET BALD', statusClass='pending', meta=`Start ${formatPickStart(live.start)}`, timeText='Vor dem Spiel';
+  let result='<div class="pick-live-result pending">◌ NOCH OFFEN</div>';
+  if(live.status==='live'){
+    status=`LIVE · ${live.minute}'`; statusClass='live';
+    meta=`⏳ Noch ${formatRemaining(live.end-Date.now())}`; timeText=`⏱ Spielminute ${live.minute}'`;
+    result=verdict==='correct'?'<div class="pick-live-result correct">✓ AKTUELL RICHTIG</div>':'<div class="pick-live-result wrong">✕ AKTUELL FALSCH</div>';
+  } else if(live.status==='finished'){
+    status='BEENDET'; statusClass='done'; meta='🏁 Spiel beendet'; timeText=`${live.duration} Minuten`;
+    result=verdict==='correct'?'<div class="pick-live-result correct">✓ PICK RICHTIG</div>':'<div class="pick-live-result wrong">✕ PICK FALSCH</div>';
   }
-
-  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+  return `<div class="pick-live pick-live-${statusClass}">
+    <div class="pick-live-head"><span class="pick-live-dot ${statusClass}">${statusClass==='live'?'● ':''}${status}</span><span>${escapeHtml(pick.sport||'SPORT')}</span></div>
+    <div class="pick-live-score"><span>${escapeHtml(teams.home)}</span><strong>${score[0]} <i>:</i> ${score[1]}</strong><span>${escapeHtml(teams.away)}</span></div>
+    <div class="pick-live-meta"><span>${escapeHtml(meta)}</span><span>${escapeHtml(timeText)}</span></div>
+    ${result}
+    <div class="pick-start">🎯 Tipp <b>${escapeHtml(pick.tip||'—')}</b></div>
+  </div>`;
 }
 
-function getPickTeamNames(pick) {
-  const parts = String(pick.match || '').split(/\s+[—–-]\s+/);
-  return {
-    home: parts[0]?.trim() || 'Team A',
-    away: parts[1]?.trim() || 'Team B'
-  };
-}
-
-function renderPickLiveTicker(pick, index) {
-  const live = getPickLiveState(pick, index);
-  const score = getSimulatedPickScore(pick, index, live);
-  const verdict = getPickVerdict(pick, index);
-  const teams = getPickTeamNames(pick);
-
-  let statusLabel = 'STARTET BALD';
-  let statusClass = 'pending';
-  let meta = `Start ${formatPickStart(live.start)}`;
-  let result = '<div class="pick-live-result pending">— Noch offen</div>';
-  let timeText = 'Startzeit nicht festgelegt';
-
-  if (live.status === 'live') {
-    statusLabel = `LIVE · ${live.minute}'`;
-    statusClass = 'live';
-    meta = `Noch ${formatRemaining(live.end - Date.now())}`;
-    timeText = `Läuft seit ${live.minute}'`;
-
-    if (verdict === 'correct') {
-      result = '<div class="pick-live-result correct">✓ AKTUELL RICHTIG</div>';
-    } else if (verdict === 'wrong') {
-      result = '<div class="pick-live-result wrong">✕ AKTUELL FALSCH</div>';
-    } else {
-      result = '<div class="pick-live-result pending">— AKTUELL OFFEN</div>';
-    }
-  } else if (live.status === 'finished') {
-    statusLabel = 'BEENDET';
-    statusClass = 'done';
-    meta = 'Spiel beendet';
-    timeText = `Endstand nach ${live.duration} Min.`;
-    result = verdict === 'correct'
-      ? '<div class="pick-live-result correct">✓ PICK RICHTIG</div>'
-      : '<div class="pick-live-result wrong">✕ PICK FALSCH</div>';
-  }
-
-  return `
-    <div class="pick-live pick-live-${statusClass}">
-      <div class="pick-live-head">
-        <span class="pick-live-dot ${statusClass}">● ${statusLabel}</span>
-        <span>${escapeHtml(pick.sport || 'SPORT')}</span>
-      </div>
-
-      <div class="pick-live-score">
-        <span>${escapeHtml(teams.home)}</span>
-        <strong>${score[0]} : ${score[1]}</strong>
-        <span>${escapeHtml(teams.away)}</span>
-      </div>
-
-      <div class="pick-live-meta">
-        <span>${escapeHtml(meta)}</span>
-        <span>${escapeHtml(timeText)}</span>
-      </div>
-
-      ${result}
-
-      <div class="pick-start">
-        Tipp: <b>${escapeHtml(pick.tip || '—')}</b>
-      </div>
-    </div>
-  `;
-}
-
-function renderPicksLiveTicker() {
-  const container = $('#picksLiveTicker');
-  if (!container) return;
-
-  if (!state.picks.length) {
-    container.innerHTML = '';
-    return;
-  }
-
-  const items = state.picks.map((pick, index) => {
-    const live = getPickLiveState(pick, index);
-    const score = getSimulatedPickScore(pick, index, live);
-    const teams = getPickTeamNames(pick);
-
-    let stateLabel = `START ${formatPickStart(live.start)}`;
-    let stateClass = 'upcoming';
-
-    if (live.status === 'live') {
-      stateLabel = `LIVE ${live.minute}'`;
-      stateClass = 'live';
-    } else if (live.status === 'finished') {
-      stateLabel = 'FINAL';
-      stateClass = 'finished';
-    }
-
-    return `
-      <div class="picks-live-ticker-item ${stateClass}">
-        <span>${escapeHtml(teams.home)} <strong>${score[0]}:${score[1]}</strong> ${escapeHtml(teams.away)}</span>
-        <span class="ticker-state">${escapeHtml(stateLabel)}</span>
-      </div>
-    `;
-  }).join('');
-
-  container.innerHTML = `<div class="picks-live-ticker-track">${items}</div>`;
-}
-
-function updateLivePickTickers() {
-  document.querySelectorAll('[data-pick-live]').forEach(element => {
-    const index = Number(element.dataset.pickLive);
-    const pick = state.picks[index];
-    if (pick) {
-      element.innerHTML = renderPickLiveTicker(pick, index);
-    }
-  });
-
+function updateLivePickTickers(){
+  document.querySelectorAll('[data-pick-live]').forEach(el=>{const i=Number(el.dataset.pickLive),pick=state.picks[i];if(pick)el.innerHTML=renderPickLiveTicker(pick,i);});
   renderPicksLiveTicker();
 }
 
-/* =========================================================
-   PICKS
-   ========================================================= */
-
-function renderPicks() {
-  const grid = $('#pickGrid');
-  if (!grid) return;
-
-  if (!state.picks.length) {
-    grid.innerHTML = `<div class="empty">Aktuell keine Picks veröffentlicht.</div>`;
-    return;
-  }
-
-  grid.innerHTML = state.picks.map((pick, index) => `
-    <article class="pick-card">
-      <div class="pick-top">
-        <span>${escapeHtml(pick.tag)}</span>
-        <small>#${String(index + 1).padStart(2, '0')}</small>
-      </div>
-
-      <small class="pick-sport">${escapeHtml(pick.sport)}</small>
-
-      <h3>${escapeHtml(pick.match)}</h3>
-
-      <div class="pick-tip">
-        <span>TIPP</span>
-        <strong>${escapeHtml(pick.tip)}</strong>
-      </div>
-
-      <p>${escapeHtml(pick.reason)}</p>
-
-      <div class="pick-bottom">
-        <span>QUOTE</span>
-        <strong>${escapeHtml(pick.odd)}</strong>
-      </div>
-
-      <div data-pick-live="${index}">
-        ${renderPickLiveTicker(pick, index)}
-      </div>
-    </article>
-  `).join('');
-
+function renderPicks(){
+  const grid=$('#pickGrid');if(!grid)return;
+  if(!state.picks.length){grid.innerHTML='<div class="empty">Aktuell keine Picks veröffentlicht.</div>';return;}
+  grid.innerHTML=state.picks.map((pick,index)=>`<article class="pick-card">
+    <div class="pick-top"><span>${escapeHtml(pick.tag||'PICK')}</span><small>#${String(index+1).padStart(2,'0')}</small></div>
+    <small class="pick-sport">${escapeHtml(pick.sport||'SPORT')}</small>
+    <h3>${escapeHtml(pick.match)}</h3>
+    <div class="pick-tip"><span>🎯 TIPP</span><strong>${escapeHtml(pick.tip)}</strong></div>
+    <p>📝 ${escapeHtml(pick.reason)}</p>
+    <div class="pick-bottom"><span>💶 QUOTE</span><strong>${escapeHtml(pick.odd||'—')}</strong></div>
+    <div data-pick-live="${index}">${renderPickLiveTicker(pick,index)}</div>
+  </article>`).join('');
   renderPicksLiveTicker();
 }
+
 
 /* =========================================================
    GITHUB
@@ -2996,37 +2732,6 @@ function renderAdminPicks() {
 
               </label>
 
-              <label>
-                Startzeit
-                <input type="datetime-local" data-field="startAt" data-index="${index}" value="${pick.startAt ? new Date(pick.startAt).toISOString().slice(0,16) : ''}">
-              </label>
-
-              <label>
-                Dauer (Min.)
-                <input type="number" min="1" data-field="durationMinutes" data-index="${index}" value="${escapeHtml(pick.durationMinutes ?? 105)}">
-              </label>
-
-
-              <label>
-                Startzeit
-                <input
-                  type="datetime-local"
-                  data-field="startAt"
-                  data-index="${index}"
-                  value="${escapeHtml((pick.startAt || '').slice(0,16))}"
-                >
-              </label>
-
-              <label>
-                Dauer (Min.)
-                <input
-                  type="number"
-                  min="1"
-                  data-field="durationMinutes"
-                  data-index="${index}"
-                  value="${escapeHtml(pick.durationMinutes || 105)}"
-                >
-              </label>
 
               <label class="full">
 
@@ -3153,13 +2858,7 @@ function addPick() {
       'NEW',
 
     odd:
-      '1.90',
-
-    startAt:
-      new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-
-    durationMinutes:
-      105
+      '1.90'
 
   });
 
@@ -3521,22 +3220,30 @@ function initResetEvents() {
    START
    ========================================================= */
 
+function removeLegacySportsUI(){
+  const selectors=['.sports','.live-section','.sports-filter','.market-section','.bet-slip','.betslip','#betSlip','#sports','#live'];
+  document.querySelectorAll(selectors.join(',')).forEach(el=>el.remove());
+  document.querySelectorAll('section,article,div').forEach(el=>{
+    const text=(el.textContent||'').replace(/\s+/g,' ').trim();
+    if(/Pick your arena\.?/i.test(text)||/Im Spiel\. Im Moment\./i.test(text)||/^Bet Slip$/i.test(text)){
+      const target=el.closest('section')||el;
+      if(!target.closest('#loginGate')) target.remove();
+    }
+  });
+}
+
 function init() {
 
+  removeLegacySportsUI();
   initLogin();
 
   initResetEvents();
 
   renderHero();
 
-  renderMatches();
-
   renderPicks();
 
-
   initMobile();
-
-  initFilters();
 
   initAdmin();
 
@@ -3550,7 +3257,6 @@ function init() {
     },
     1000
   );
-
 
 
   /*
