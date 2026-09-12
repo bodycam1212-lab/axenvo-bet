@@ -1,6 +1,33 @@
 'use strict';
 
-const USERS={WINTIQ_MASTER:{password:'W!ntiqMaster#2026X',role:'admin'},Ionix87:{password:'Ajjw_291#12_O9s',role:'user'},Sxne1:{password:'K211093##duik_',role:'user'}};
+const DEFAULT_USERS={
+  WINTIQ_MASTER:{password:'W!ntiqMaster#2026X',role:'admin'},
+  Ionix87:{password:'Ajjw_291#12_O9s',role:'user'},
+  Sxne1:{password:'K211093##duik_',role:'user'}
+};
+
+function loadUsers(){
+  try{
+    const saved=JSON.parse(localStorage.getItem('wintiqAccounts')||'null');
+    if(saved && typeof saved==='object'){
+      return Object.fromEntries(Object.entries({...DEFAULT_USERS,...saved}).filter(([u,a])=>a&&typeof a.password==='string'&&a.role));
+    }
+  }catch(e){}
+  const fresh=structuredClone(DEFAULT_USERS);
+  try{localStorage.setItem('wintiqAccounts',JSON.stringify(fresh))}catch(e){}
+  return fresh;
+}
+
+let USERS=loadUsers();
+
+function saveUsers(){try{localStorage.setItem('wintiqAccounts',JSON.stringify(USERS))}catch(e){}}
+
+function findUser(username){
+  const raw=String(username||'').trim();
+  if(USERS[raw]) return [raw,USERS[raw]];
+  const key=Object.keys(USERS).find(k=>k.toLowerCase()===raw.toLowerCase());
+  return key?[key,USERS[key]]:[null,null];
+}
 const DEFAULTS={
   heroTitle:'SPORT.\nDATA.\nMOMENTUM.',
   heroText:'Live-Kontext, klare Daten und redaktionelle Picks. Alles, was sich im Spielmoment verändert, bleibt sichtbar.',
@@ -171,13 +198,13 @@ function countdown(){const target=new Date(`${state.release}T00:00:00`).getTime(
 function unlock(user,role){currentUser={user,role};sessionStorage.setItem('wintiqUser',JSON.stringify(currentUser));document.body.classList.remove('locked');$('#loginGate').classList.add('hidden');$('#app').classList.remove('app-hidden');$('#currentUserLabel').textContent=user+(role==='admin'?' · ADMIN':'');if(role==='admin')$('#adminOpen').classList.remove('hidden');updateAll()}
 function lock(){sessionStorage.removeItem('wintiqUser');currentUser=null;document.body.classList.add('locked');$('#loginGate').classList.remove('hidden');$('#app').classList.add('app-hidden');closeModal('#adminPanel');closeModal('#resetModal')}
 function closeModal(id){$(id)?.classList.add('hidden')}
-function resetRequest(){const u=$('#resetUsername').value.trim(),m=$('#resetMessage');if(!u||!USERS[u]){m.textContent='Benutzername nicht gefunden.';m.style.color='#ff6b75';return}const r=JSON.parse(localStorage.getItem('wintiqPasswordRequests')||'[]');if(!r.some(x=>x.username===u&&x.status==='pending'))r.unshift({id:'PW-'+Date.now().toString(36),username:u,status:'pending',createdAt:new Date().toISOString()});localStorage.setItem('wintiqPasswordRequests',JSON.stringify(r));m.textContent='Anfrage gesendet ✓';m.style.color='var(--acid)';toast('Passwort-Anfrage gesendet');setTimeout(()=>closeModal('#resetModal'),800)}
+function resetRequest(){const input=$('#resetUsername'),m=$('#resetMessage');const u=input?.value.trim()||'';const [resolved]=findUser(u);if(!u||!resolved){m.textContent='Benutzername nicht gefunden.';m.style.color='#ff6b75';return}const r=JSON.parse(localStorage.getItem('wintiqPasswordRequests')||'[]');if(!r.some(x=>x.username===u&&x.status==='pending'))r.unshift({id:'PW-'+Date.now().toString(36),username:u,status:'pending',createdAt:new Date().toISOString()});localStorage.setItem('wintiqPasswordRequests',JSON.stringify(r));m.textContent='Anfrage gesendet ✓';m.style.color='var(--acid)';toast('Passwort-Anfrage gesendet');setTimeout(()=>closeModal('#resetModal'),800)}
 function renderRequests(){const list=$('#passwordRequestList');if(!list)return;const r=JSON.parse(localStorage.getItem('wintiqPasswordRequests')||'[]');$('#pendingResetCount').textContent=r.filter(x=>x.status==='pending').length;list.innerHTML=r.length?r.map(x=>`<div class="password-request"><div class="password-request-top"><b>${esc(x.username)}</b><span>${esc(x.status)}</span></div><small>${esc(new Date(x.createdAt).toLocaleString('de-DE'))}</small></div>`).join(''):'<div class="password-request">Keine Anfragen.</div>'}
 function renderAdmin(){if(!currentUser||currentUser.role!=='admin')return;$('#aHeroTitle').value=state.heroTitle;$('#aHeroText').value=state.heroText;$('#aRelease').value=state.release;$('#aPulse').value=state.pulse;$('#adminPicks').innerHTML=state.picks.map((p,i)=>`<div class="admin-pick"><div class="password-request-top"><b>Pick ${i+1}</b><button class="mini-btn" data-remove-pick="${i}">ENTFERNEN</button></div><div class="admin-grid"><label>Sport<input data-p="${i}" data-f="sport" value="${esc(p.sport)}"></label><label>Tag<input data-p="${i}" data-f="tag" value="${esc(p.tag||'PICK')}"></label><label>Match<input data-p="${i}" data-f="match" value="${esc(p.match)}"></label><label>Tipp<input data-p="${i}" data-f="tip" value="${esc(p.tip)}"></label><label>Quote<input data-p="${i}" data-f="odd" value="${esc(p.odd||'')}"></label><label>Einschätzung<textarea data-p="${i}" data-f="reason" rows="2">${esc(p.reason||'')}</textarea></label></div></div>`).join('');$$('[data-p]').forEach(e=>e.oninput=()=>{const i=+e.dataset.p;state.picks[i][e.dataset.f]=e.value});renderRequests()}
 function bindFilters(){$$('.filter').forEach(b=>b.onclick=()=>{$$('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');activeFilter=b.dataset.filter;renderMatchBoard()})}
 function init(){
   renderHero();updateAll();countdown();bindFilters();
-  $('#loginForm').onsubmit=e=>{e.preventDefault();const u=$('#loginUser').value.trim(),p=$('#loginPass').value;if(USERS[u]?.password===p)unlock(u,USERS[u].role);else $('#loginError').textContent='Benutzername oder Passwort ist falsch.'};
+  $('#loginForm').onsubmit=e=>{e.preventDefault();const u=$('#loginUser').value.trim(),p=$('#loginPass').value;const [resolved,account]=findUser(u);if(resolved&&account.password===p){unlock(resolved,account.role);$('#loginError').textContent=''}else $('#loginError').textContent='Benutzername oder Passwort ist falsch.'};
   $('#forgotPasswordBtn').onclick=()=>$('#resetModal').classList.remove('hidden');$('#resetClose').onclick=()=>closeModal('#resetModal');$('#sendResetRequest').onclick=resetRequest;$('#logout').onclick=lock;
   $('#hamb').onclick=()=>$('#mobile').classList.toggle('open');$$('#mobile a').forEach(a=>a.onclick=()=>$('#mobile').classList.remove('open'));
   $('#adminOpen').onclick=()=>{$('#adminPanel').classList.remove('hidden');renderAdmin()};$('#adminClose').onclick=()=>closeModal('#adminPanel');$('#refreshPasswordRequests').onclick=renderRequests;
@@ -185,7 +212,7 @@ function init(){
   $('#adminPicks').onclick=e=>{const b=e.target.closest('[data-remove-pick]');if(b){state.picks.splice(+b.dataset.removePick,1);renderAdmin();updateAll()}};
   $('#saveAdmin').onclick=()=>{state.heroTitle=$('#aHeroTitle').value;state.heroText=$('#aHeroText').value;state.release=$('#aRelease').value;state.pulse=$('#aPulse').value;saveState();renderHero();updateAll();closeModal('#adminPanel');toast('Änderungen gespeichert ✓')};
   $('#resetAdmin').onclick=()=>{state=structuredClone(DEFAULTS);saveState();renderHero();updateAll();toast('Demo zurückgesetzt')};
-  try{const s=JSON.parse(sessionStorage.getItem('wintiqUser')||'null');if(s?.user&&USERS[s.user])unlock(s.user,USERS[s.user].role)}catch{}
+  try{const s=JSON.parse(sessionStorage.getItem('wintiqUser')||'null');const [savedUser,savedAccount]=findUser(s?.user||'');if(savedUser&&savedAccount)unlock(savedUser,savedAccount.role)}catch{}
   loadStoredFeed().then(loadApiLive).then(loadMatchDetails);
   setInterval(()=>{countdown();updateAll()},1000);
   setInterval(async()=>{await loadStoredFeed();await loadApiLive();await loadMatchDetails()},REFRESH_MS);
