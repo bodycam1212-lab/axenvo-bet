@@ -61,8 +61,8 @@ async function fetchSummary(league,eventId){
 }
 
 const now = new Date();
-const from = new Date(now); from.setUTCDate(from.getUTCDate()-config.searchWindowDays);
-const to = new Date(now); to.setUTCDate(to.getUTCDate()+config.searchWindowDays);
+const from = new Date(now); from.setUTCDate(from.getUTCDate()-Math.max(3, config.searchWindowDays));
+const to = new Date(now); to.setUTCDate(to.getUTCDate()+Math.max(3, config.searchWindowDays));
 const allEvents=[];
 for (const league of [...new Set(Object.values(config.leagues).flat())]) {
   try {
@@ -89,7 +89,7 @@ for (const p of picks) {
     });
   }
   if (!found) {
-    matches[p.id] = {...(matches[p.id]||{}), status:'unavailable', source:'ESPN', lastChecked:now.toISOString(), reason:'Kein passendes Spiel im aktuellen Datenfenster gefunden.'};
+    matches[p.id] = {...(matches[p.id]||{}), status:(matches[p.id]?.status==='finished'?'finished':'unavailable'), source:(matches[p.id]?.source||'ESPN'), lastChecked:now.toISOString(), stale:true, reason:(matches[p.id]?.status==='finished'?'Letzter bestätigter Endstand bleibt erhalten.':'Kein passendes Spiel im aktuellen Datenfenster gefunden.')};
     continue;
   }
   const {league,event}=found;

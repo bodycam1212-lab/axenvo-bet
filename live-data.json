@@ -1,6 +1,99 @@
 {
-  "updatedAt": null,
-  "source": "ESPN public scoreboard",
-  "refreshSeconds": 300,
-  "matches": {}
+  "updatedAt": "2026-09-12T21:45:00+02:00",
+  "source": "Verified match results · auto feed will supersede",
+  "refreshSeconds": 15,
+  "matches": {
+    "pick-1": {
+      "status": "finished",
+      "source": "Verified result",
+      "providerLeague": "ger.1",
+      "eventId": null,
+      "home": "SC Freiburg",
+      "away": "Borussia Mönchengladbach",
+      "score": {
+        "home": 5,
+        "away": 0
+      },
+      "startAt": "2026-09-12T13:30:00Z",
+      "displayClock": "FT",
+      "minute": "90+",
+      "lastChecked": "2026-09-12T21:45:00+02:00",
+      "stale": false,
+      "events": [
+        {
+          "clock": "23'",
+          "text": "Tor für SC Freiburg",
+          "team": "SC Freiburg",
+          "type": "GOAL"
+        },
+        {
+          "clock": "29'",
+          "text": "Tor für SC Freiburg",
+          "team": "SC Freiburg",
+          "type": "GOAL"
+        },
+        {
+          "clock": "77'",
+          "text": "Tor für SC Freiburg",
+          "team": "SC Freiburg",
+          "type": "GOAL"
+        },
+        {
+          "clock": "79'",
+          "text": "Tor für SC Freiburg",
+          "team": "SC Freiburg",
+          "type": "GOAL"
+        },
+        {
+          "clock": "86'",
+          "text": "Tor für SC Freiburg",
+          "team": "SC Freiburg",
+          "type": "GOAL"
+        }
+      ]
+    },
+    "pick-2": {
+      "status": "finished",
+      "source": "Verified result",
+      "providerLeague": "ger.2",
+      "eventId": null,
+      "home": "FC St. Pauli",
+      "away": "VfL Wolfsburg",
+      "score": {
+        "home": 1,
+        "away": 0
+      },
+      "startAt": "2026-09-12T18:30:00Z",
+      "displayClock": "FT",
+      "minute": "90+",
+      "lastChecked": "2026-09-12T21:45:00+02:00",
+      "stale": false,
+      "events": [
+        {
+          "clock": "89'",
+          "text": "Joel Fujita trifft für St. Pauli",
+          "team": "FC St. Pauli",
+          "type": "GOAL"
+        }
+      ]
+    },
+    "pick-3": {
+      "status": "finished",
+      "source": "Verified result",
+      "providerLeague": "esp.1",
+      "eventId": null,
+      "home": "Racing Santander",
+      "away": "Deportivo Alavés",
+      "score": {
+        "home": 2,
+        "away": 1
+      },
+      "startAt": "2026-09-12T14:00:00Z",
+      "displayClock": "FT",
+      "minute": "90+",
+      "lastChecked": "2026-09-12T21:45:00+02:00",
+      "stale": false,
+      "events": []
+    }
+  }
 }

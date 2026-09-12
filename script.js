@@ -63,9 +63,9 @@ function aliases(s){const n=norm(s);const map={
   borussiamonchengladbach:['borussiamonchengladbach','monchengladbach','gladbach'],
   stpauli:['stpauli','fcstpauli'],
   vflwolfsburg:['wolfsburg','vflwolfsburg'],
-  racingclub:['racingdesantander','racingclub','racing'],
-  racingdesantander:['racingdesantander','racingclub','racing'],
-  realracingclub:['racingdesantander','racingclub','racing'],
+  racingclub:['racingdesantander','realracingclub','racingclub','racing'],
+  racingdesantander:['racingdesantander','realracingclub','racingclub','racing'],
+  realracingclub:['racingdesantander','realracingclub','racingclub','racing'],
   deportivoalaves:['deportivoalaves','alaves']
 };return [n,...(map[n]||[])];}
 function teamMatches(needle,value){const n=norm(needle),v=norm(value);if(!n||!v)return false;return v===n||v.includes(n)||n.includes(v)||aliases(needle).some(a=>v===a||v.includes(a)||a.includes(v))}
@@ -97,7 +97,12 @@ function normalizeFeedMatch(p,f){
   const status=['live','upcoming','finished','unavailable'].includes(f.status)?f.status:'unavailable';
   return{status,score:{home:Number(score.home||0),away:Number(score.away||0)},startAt:f.startAt||null,source:f.source||liveFeed.source||'feed',eventId:f.eventId||null,minute:f.minute||f.displayClock||'',displayClock:f.displayClock||'',events:Array.isArray(f.events)?f.events:[],lastChecked:f.lastChecked||liveFeed.updatedAt||null,stale:Boolean(f.stale),reason:f.reason||''};
 }
+function loadLiveOverrides(){try{return JSON.parse(localStorage.getItem('wintiqLiveOverrides')||'{}')}catch{return{}}}
+function saveLiveOverrides(v){try{localStorage.setItem('wintiqLiveOverrides',JSON.stringify(v))}catch{}}
+function getLiveOverride(p){const o=loadLiveOverrides()[p.id];return o&&o.enabled?o:null}
 function getLive(p){
+  const manual=getLiveOverride(p);
+  if(manual){return normalizeFeedMatch(p,{...manual,source:manual.source||'ADMIN OVERRIDE',stale:false})}
   const api=matchFromApi(p);
   if(api){
     const status=statusFromEvent(api.event), score=eventScore(api.event), start=eventDate(api.event);
@@ -178,14 +183,29 @@ async function fetchScoreboard(sport,league,dates){const u=`https://site.api.esp
 async function loadApiLive(){
   if(apiBusy)return;apiBusy=true;
   try{
-    const now=new Date(),d=new Date(now),ds=`${d.getUTCFullYear()}${String(d.getUTCMonth()+1).padStart(2,'0')}${String(d.getUTCDate()).padStart(2,'0')}`;
-    const jobs=[]; for(const p of (state.picks||[])){for(const league of (API_LEAGUES[p.sport]||[])) jobs.push({sport:p.sport==='BASKETBALL'?'basketball':'soccer',league});} const unique=jobs.filter((x,i,a)=>a.findIndex(y=>y.sport===x.sport&&y.league===x.league)===i);
-    const results=await Promise.allSettled(unique.map(x=>fetchScoreboard(x.sport,x.league,ds)));
+    const now=new Date();
+    const dates=[];
+    for(let offset=-2;offset<=2;offset++){
+      const d=new Date(now);d.setDate(d.getDate()+offset);
+      dates.push(`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`);
+    }
+    const jobs=[];
+    for(const p of (state.picks||[])){
+      for(const league of (API_LEAGUES[p.sport]||[])) jobs.push({sport:p.sport==='BASKETBALL'?'basketball':'soccer',league});
+    }
+    const unique=jobs.filter((x,i,a)=>a.findIndex(y=>y.sport===x.sport&&y.league===x.league)===i);
+    const requests=[];
+    for(const x of unique) for(const date of dates) requests.push({...x,date});
+    const results=await Promise.allSettled(requests.map(x=>fetchScoreboard(x.sport,x.league,x.date)));
     apiEvents=[];
-    results.forEach((r,i)=>{if(r.status==='fulfilled'){for(const event of (r.value.events||[])){apiEvents.push({league:unique[i].league,sport:unique[i].sport,event,teams:eventTeams(event),events:[]})}}});
+    results.forEach((r,i)=>{
+      if(r.status!=='fulfilled')return;
+      const req=requests[i];
+      for(const event of (r.value.events||[])) apiEvents.push({league:req.league,sport:req.sport,event,teams:eventTeams(event),events:[]});
+    });
     if(apiEvents.length)liveFeed={...liveFeed,updatedAt:new Date().toISOString(),source:'ESPN live'};
     updateAll();
-  }catch{}
+  }catch(e){console.warn('Live feed error',e)}
   finally{apiBusy=false}
 }
 async function loadMatchDetails(){
@@ -200,7 +220,31 @@ function lock(){sessionStorage.removeItem('wintiqUser');currentUser=null;documen
 function closeModal(id){$(id)?.classList.add('hidden')}
 function resetRequest(){const input=$('#resetUsername'),m=$('#resetMessage');const u=input?.value.trim()||'';const [resolved]=findUser(u);if(!u||!resolved){m.textContent='Benutzername nicht gefunden.';m.style.color='#ff6b75';return}const r=JSON.parse(localStorage.getItem('wintiqPasswordRequests')||'[]');if(!r.some(x=>x.username===u&&x.status==='pending'))r.unshift({id:'PW-'+Date.now().toString(36),username:u,status:'pending',createdAt:new Date().toISOString()});localStorage.setItem('wintiqPasswordRequests',JSON.stringify(r));m.textContent='Anfrage gesendet ✓';m.style.color='var(--acid)';toast('Passwort-Anfrage gesendet');setTimeout(()=>closeModal('#resetModal'),800)}
 function renderRequests(){const list=$('#passwordRequestList');if(!list)return;const r=JSON.parse(localStorage.getItem('wintiqPasswordRequests')||'[]');$('#pendingResetCount').textContent=r.filter(x=>x.status==='pending').length;list.innerHTML=r.length?r.map(x=>`<div class="password-request"><div class="password-request-top"><b>${esc(x.username)}</b><span>${esc(x.status)}</span></div><small>${esc(new Date(x.createdAt).toLocaleString('de-DE'))}</small></div>`).join(''):'<div class="password-request">Keine Anfragen.</div>'}
-function renderAdmin(){if(!currentUser||currentUser.role!=='admin')return;$('#aHeroTitle').value=state.heroTitle;$('#aHeroText').value=state.heroText;$('#aRelease').value=state.release;$('#aPulse').value=state.pulse;$('#adminPicks').innerHTML=state.picks.map((p,i)=>`<div class="admin-pick"><div class="password-request-top"><b>Pick ${i+1}</b><button class="mini-btn" data-remove-pick="${i}">ENTFERNEN</button></div><div class="admin-grid"><label>Sport<input data-p="${i}" data-f="sport" value="${esc(p.sport)}"></label><label>Tag<input data-p="${i}" data-f="tag" value="${esc(p.tag||'PICK')}"></label><label>Match<input data-p="${i}" data-f="match" value="${esc(p.match)}"></label><label>Tipp<input data-p="${i}" data-f="tip" value="${esc(p.tip)}"></label><label>Quote<input data-p="${i}" data-f="odd" value="${esc(p.odd||'')}"></label><label>Einschätzung<textarea data-p="${i}" data-f="reason" rows="2">${esc(p.reason||'')}</textarea></label></div></div>`).join('');$$('[data-p]').forEach(e=>e.oninput=()=>{const i=+e.dataset.p;state.picks[i][e.dataset.f]=e.value});renderRequests()}
+function renderAdmin(){
+  if(!currentUser||currentUser.role!=='admin')return;
+  $('#aHeroTitle').value=state.heroTitle;
+  $('#aHeroText').value=state.heroText;
+  $('#aRelease').value=state.release;
+  $('#aPulse').value=state.pulse;
+  $('#adminPicks').innerHTML=state.picks.map((p,i)=>`<div class="admin-pick"><div class="password-request-top"><b>Pick ${i+1}</b><button class="mini-btn" data-remove-pick="${i}">ENTFERNEN</button></div><div class="admin-grid"><label>Sport<input data-p="${i}" data-f="sport" value="${esc(p.sport)}"></label><label>Tag<input data-p="${i}" data-f="tag" value="${esc(p.tag||'PICK')}"></label><label>Match<input data-p="${i}" data-f="match" value="${esc(p.match)}"></label><label>Tipp<input data-p="${i}" data-f="tip" value="${esc(p.tip)}"></label><label>Quote<input data-p="${i}" data-f="odd" value="${esc(p.odd||'')}"></label><label>Einschätzung<textarea data-p="${i}" data-f="reason" rows="2">${esc(p.reason||'')}</textarea></label></div></div>`).join('');
+  $$('[data-p]').forEach(e=>e.oninput=()=>{const i=+e.dataset.p;if(state.picks[i])state.picks[i][e.dataset.f]=e.value});
+  const overrides=loadLiveOverrides();
+  $('#adminLiveControls').innerHTML=state.picks.map((p,i)=>{const o=overrides[p.id]||{};const t=teams(p);return `<div class="admin-pick"><div class="password-request-top"><b>${esc(t.home)} — ${esc(t.away)}</b><label><input type="checkbox" data-live-enabled="${p.id}" ${o.enabled?'checked':''}> Override aktiv</label></div><div class="admin-grid"><label>Status<select data-live-field="status" data-live-id="${p.id}"><option value="upcoming" ${o.status==='upcoming'?'selected':''}>Upcoming</option><option value="live" ${o.status==='live'?'selected':''}>Live</option><option value="finished" ${o.status==='finished'?'selected':''}>Beendet</option><option value="unavailable" ${o.status==='unavailable'?'selected':''}>Keine Daten</option></select></label><label>Startzeit<input type="datetime-local" data-live-field="startAt" data-live-id="${p.id}" value="${dateInput(o.startAt||'')}"></label><label>Heim <input type="number" min="0" data-live-field="home" data-live-id="${p.id}" value="${Number(o.score?.home||0)}"></label><label>Auswärts <input type="number" min="0" data-live-field="away" data-live-id="${p.id}" value="${Number(o.score?.away||0)}"></label><label>Minute<input data-live-field="minute" data-live-id="${p.id}" value="${esc(o.minute||'')}" placeholder="z. B. 72"></label><label>Letztes Event<input data-live-field="eventText" data-live-id="${p.id}" value="${esc(o.eventText||'')}" placeholder="z. B. 72' Tor Heimteam"></label></div></div>`}).join('');
+  $$('[data-live-field],[data-live-enabled]').forEach(e=>e.addEventListener('input',collectLiveOverride));
+  $$('[data-live-enabled]').forEach(e=>e.addEventListener('change',collectLiveOverride));
+  renderRequests();
+}
+function collectLiveOverride(){
+  const overrides=loadLiveOverrides();
+  state.picks.forEach(p=>{
+    const id=p.id;const enabled=$(`[data-live-enabled="${CSS.escape(id)}"]`)?.checked;
+    const get=f=>$(`[data-live-field="${f}"][data-live-id="${CSS.escape(id)}"]`)?.value||'';
+    const existing=overrides[id]||{};
+    overrides[id]={...existing,enabled:!!enabled,status:get('status')||existing.status||'upcoming',startAt:get('startAt')?new Date(get('startAt')).toISOString():existing.startAt||null,score:{home:Number(get('home')||0),away:Number(get('away')||0)},minute:get('minute'),eventText:get('eventText'),events:get('eventText')?[{clock:get('minute')?`${get('minute')}'`:'',type:'EVENT',text:get('eventText')}]:existing.events||[],source:'ADMIN OVERRIDE'};
+  });
+  saveLiveOverrides(overrides);updateAll();
+}
+
 function bindFilters(){$$('.filter').forEach(b=>b.onclick=()=>{$$('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');activeFilter=b.dataset.filter;renderMatchBoard()})}
 function bindLogin(){
   const form=$('#loginForm');
@@ -239,7 +283,7 @@ function init(){
   $('#refreshPasswordRequests')?.addEventListener('click',renderRequests);
   $('#addPick')?.addEventListener('click',()=>{state.picks.push({id:'pick-'+Date.now(),sport:'FUSSBALL',match:'Neue Partie — Gegner',tip:'Heimsieg',reason:'Neue WINTIQ Einschätzung.',tag:'NEW',odd:'1.90'});renderAdmin();updateAll()});
   $('#adminPicks')?.addEventListener('click',e=>{const b=e.target.closest('[data-remove-pick]');if(b){state.picks.splice(+b.dataset.removePick,1);renderAdmin();updateAll()}});
-  $('#saveAdmin')?.addEventListener('click',()=>{state.heroTitle=$('#aHeroTitle').value;state.heroText=$('#aHeroText').value;state.release=$('#aRelease').value;state.pulse=$('#aPulse').value;saveState();renderHero();updateAll();closeModal('#adminPanel');toast('Änderungen gespeichert ✓')});
+  $('#saveAdmin')?.addEventListener('click',()=>{state.heroTitle=$('#aHeroTitle').value;state.heroText=$('#aHeroText').value;state.release=$('#aRelease').value;state.pulse=$('#aPulse').value;collectLiveOverride();saveState();renderHero();updateAll();closeModal('#adminPanel');toast('Änderungen gespeichert ✓')});
   $('#resetAdmin')?.addEventListener('click',()=>{state=structuredClone(DEFAULTS);saveState();renderHero();updateAll();toast('Demo zurückgesetzt')});
   try{const saved=JSON.parse(sessionStorage.getItem('wintiqUser')||'null');const [savedUser,savedAccount]=findUser(saved?.user||'');if(savedUser&&savedAccount)unlock(savedUser,savedAccount.role)}catch(e){sessionStorage.removeItem('wintiqUser')}
   loadStoredFeed().then(loadApiLive).then(loadMatchDetails).catch(()=>{});
