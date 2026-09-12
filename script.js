@@ -85,9 +85,11 @@ const DEFAULTS = {
       reason:
         'WINTIQ-Einschätzung: TEST der Discord-Verbindung.',
       tag: 'TOP PICK',
-      odd: '9.09',
-      startAt: '2026-09-12T14:15:00+02:00',
-      durationMinutes: 105
+      odd: '1.72',
+      startAt: new Date(Date.now() - 61 * 60000).toISOString(),
+      durationMin: 105,
+      score: ['2', '1'],
+      result: ''
     },
 
     {
@@ -98,8 +100,10 @@ const DEFAULTS = {
         'WINTIQ-Einschätzung: stärkerer Start in die Partie.',
       tag: 'EDGE',
       odd: '1.85',
-      startAt: '2026-09-12T15:30:00+02:00',
-      durationMinutes: 120
+      startAt: new Date(Date.now() + 42 * 60000).toISOString(),
+      durationMin: 105,
+      score: ['0', '0'],
+      result: ''
     },
 
     {
@@ -110,8 +114,10 @@ const DEFAULTS = {
         'WINTIQ-Einschätzung: Matchup spricht leicht für das Heimteam.',
       tag: 'WATCH',
       odd: '1.92',
-      startAt: '2026-09-12T18:00:00+02:00',
-      durationMinutes: 150
+      startAt: new Date(Date.now() + 97 * 60000).toISOString(),
+      durationMin: 120,
+      score: ['0', '0'],
+      result: ''
     }
 
   ]
@@ -1782,115 +1788,478 @@ function updateCountdown() {
 
 
 /* =========================================================
-   LIVE PICK TRACKING + PICKS
+   LIVE MATCHES
    ========================================================= */
 
-function getPickLiveState(pick, index) {
-  const fallbackStarts = [
-    '2026-09-12T14:15:00+02:00',
-    '2026-09-12T15:30:00+02:00',
-    '2026-09-12T18:00:00+02:00'
-  ];
-  const rawStart = pick.startAt || fallbackStarts[index % fallbackStarts.length];
-  const start = new Date(rawStart).getTime();
-  const duration = Math.max(60, Number(pick.durationMinutes) || 105);
-  const end = start + duration * 60 * 1000;
-  const now = Date.now();
-  if (!Number.isFinite(start)) return {status:'unknown',start:NaN,end:NaN,duration,elapsed:0,minute:0};
-  if (now < start) return {status:'upcoming',start,end,duration,elapsed:0,minute:0};
-  if (now >= end) return {status:'finished',start,end,duration,elapsed:duration,minute:duration};
-  const elapsed = Math.floor((now-start)/60000);
-  return {status:'live',start,end,duration,elapsed,minute:Math.max(1,elapsed+1)};
-}
+const MATCHES = [
 
-function getSimulatedPickScore(pick,index,liveState){
-  const seed=`${pick.match||''}|${pick.tip||''}|${index}`;
-  let hash=0;
-  for(let i=0;i<seed.length;i++) hash=((hash<<5)-hash+seed.charCodeAt(i))|0;
-  hash=Math.abs(hash);
-  if(liveState.status==='upcoming'||liveState.status==='unknown') return [0,0];
-  const progress=liveState.status==='finished'?1:Math.min(1,liveState.elapsed/Math.max(1,liveState.duration));
-  return [Math.min(5,Math.floor(progress*(hash%4+1))),Math.min(5,Math.floor(progress*((hash>>3)%3+1)))];
-}
+  {
+    sport: 'football',
+    league: 'BUNDESLIGA',
+    time: "LIVE 68'",
+    home: 'FC Bayern',
+    away: 'Dortmund',
+    score: ['2', '1'],
+    odds: ['1.78', '3.90', '4.40']
+  },
 
-function getPickVerdict(pick,index){
-  const live=getPickLiveState(pick,index);
-  if(live.status==='upcoming'||live.status==='unknown') return 'pending';
-  const [home,away]=getSimulatedPickScore(pick,index,live);
-  const tip=String(pick.tip||'').toLowerCase();
-  if(tip.includes('unentschieden')||tip.includes('draw')) return home===away?'correct':'wrong';
-  if(tip.includes('auswärt')||tip.includes('away')) return away>home?'correct':'wrong';
-  if(tip.includes('over')||tip.includes('mehr')) return home+away>=3?'correct':'wrong';
-  if(tip.includes('under')||tip.includes('weniger')) return home+away<3?'correct':'wrong';
-  return home>away?'correct':'wrong';
-}
+  {
+    sport: 'football',
+    league: 'CHAMPIONS LEAGUE',
+    time: '19:30',
+    home: 'Real Madrid',
+    away: 'Barcelona',
+    score: ['0', '0'],
+    odds: ['2.05', '3.50', '3.20']
+  },
 
-function formatPickStart(start){
-  if(!Number.isFinite(start)) return 'Startzeit nicht festgelegt';
-  return new Date(start).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-}
+  {
+    sport: 'tennis',
+    league: 'ATP',
+    time: '19:30',
+    home: 'Spieler A',
+    away: 'Spieler B',
+    score: ['1', '0'],
+    odds: ['1.65', '2.20']
+  },
 
-function formatRemaining(ms){
-  if(!Number.isFinite(ms)||ms<=0) return '0:00';
-  const total=Math.ceil(ms/1000),h=Math.floor(total/3600),m=Math.floor((total%3600)/60),sec=total%60;
-  return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`:`${m}:${String(sec).padStart(2,'0')}`;
-}
-
-function getPickTeamNames(pick){
-  const parts=String(pick.match||'').split(/\s+[—–-]\s+/);
-  return {home:parts[0]?.trim()||'Team A',away:parts[1]?.trim()||'Team B'};
-}
-
-function renderPickLiveTicker(pick,index){
-  const live=getPickLiveState(pick,index),score=getSimulatedPickScore(pick,index,live),verdict=getPickVerdict(pick,index),teams=getPickTeamNames(pick);
-  let statusLabel='STARTET BALD',statusClass='pending',meta=`Start ${formatPickStart(live.start)}`,result='<div class="pick-live-result pending">— NOCH OFFEN</div>',timeText='Vor dem Spiel';
-  if(live.status==='live'){
-    statusLabel=`LIVE · ${live.minute}'`;statusClass='live';meta=`Noch ${formatRemaining(live.end-Date.now())}`;timeText=`Spielminute ${live.minute}'`;
-    result=verdict==='correct'?'<div class="pick-live-result correct">✓ AKTUELL RICHTIG</div>':verdict==='wrong'?'<div class="pick-live-result wrong">✕ AKTUELL FALSCH</div>':'<div class="pick-live-result live">● AKTUELL LIVE</div>';
-  }else if(live.status==='finished'){
-    statusLabel='BEENDET';statusClass='done';meta='Spiel beendet';timeText=`${live.duration} Min.`;
-    result=verdict==='correct'?'<div class="pick-live-result correct">✓ PICK RICHTIG</div>':'<div class="pick-live-result wrong">✕ PICK FALSCH</div>';
+  {
+    sport: 'basketball',
+    league: 'NBA',
+    time: '21:00',
+    home: 'Lakers',
+    away: 'Celtics',
+    score: ['0', '0'],
+    odds: ['1.92', '1.88']
   }
-  return `<div class="pick-live pick-live-${statusClass}">
-    <div class="pick-live-head"><span class="pick-live-dot ${statusClass}">${statusClass==='live'?'● ':''}${statusLabel}</span><span>${escapeHtml(pick.sport||'SPORT')}</span></div>
-    <div class="pick-live-score"><span>${escapeHtml(teams.home)}</span><strong>${score[0]} : ${score[1]}</strong><span>${escapeHtml(teams.away)}</span></div>
-    <div class="pick-live-meta"><span>${escapeHtml(meta)}</span><span>${escapeHtml(timeText)}</span></div>
-    ${result}
-    <div class="pick-start">🎯 Tipp: <b>${escapeHtml(pick.tip||'—')}</b></div>
-  </div>`;
+
+];
+
+
+function renderMatches(
+  filter = 'all'
+) {
+
+  const container =
+    $('#matches');
+
+  if (!container) {
+    return;
+  }
+
+
+  const matches =
+    filter === 'all'
+      ? MATCHES
+      : MATCHES.filter(
+          match =>
+            match.sport === filter
+        );
+
+
+  container.innerHTML =
+    matches.map(
+      match => {
+
+        const oddsHtml =
+          match.odds
+            .map(
+              odd => `
+
+                <button
+                  class="odd"
+                  type="button"
+                  data-odd="${escapeHtml(odd)}"
+                >
+                  ${escapeHtml(odd)}
+                </button>
+
+              `
+            )
+            .join('');
+
+
+        return `
+
+          <article class="match-card">
+
+            <div class="match-top">
+
+              <small>
+                ${escapeHtml(match.league)}
+              </small>
+
+              <span>
+                ${escapeHtml(match.time)}
+              </span>
+
+            </div>
+
+
+            <div class="match-teams">
+
+              <div>
+
+                <strong>
+                  ${escapeHtml(match.home)}
+                </strong>
+
+                <strong>
+                  ${escapeHtml(match.away)}
+                </strong>
+
+              </div>
+
+
+              <div class="score">
+
+                <b>
+                  ${escapeHtml(match.score[0])}
+                </b>
+
+                <span>:</span>
+
+                <b>
+                  ${escapeHtml(match.score[1])}
+                </b>
+
+              </div>
+
+            </div>
+
+
+            <div class="odds">
+              ${oddsHtml}
+            </div>
+
+          </article>
+
+        `;
+
+      }
+    ).join('');
+
+
+  container
+    .querySelectorAll('.odd')
+    .forEach(button => {
+
+      button.addEventListener(
+        'click',
+        () => {
+
+          addToSlip(
+            button.dataset.odd
+          );
+
+        }
+      );
+
+    });
+
 }
 
-function renderPicksLiveTicker(){
-  const container=$('#picksLiveTicker');
-  if(!container) return;
-  if(!state.picks.length){container.innerHTML='';return;}
-  container.innerHTML=`<div class="picks-live-ticker-track">${state.picks.map((pick,index)=>{
-    const live=getPickLiveState(pick,index),score=getSimulatedPickScore(pick,index,live),teams=getPickTeamNames(pick);
-    let label=`START ${formatPickStart(live.start)}`,cls='upcoming';
-    if(live.status==='live'){label=`🔴 LIVE ${live.minute}'`;cls='live';}
-    else if(live.status==='finished'){label='✓ FINAL';cls='finished';}
-    return `<div class="picks-live-ticker-item ${cls}"><span>⚽ ${escapeHtml(teams.home)} <strong>${score[0]}:${score[1]}</strong> ${escapeHtml(teams.away)}</span><span class="ticker-state">${escapeHtml(label)}</span></div>`;
-  }).join('')}</div>`;
+
+/* =========================================================
+   BET SLIP
+   ========================================================= */
+
+let slipItems = [];
+
+
+function addToSlip(
+  odd
+) {
+
+  slipItems.push(
+    Number(odd)
+  );
+
+  renderSlip();
+
+  showToast(
+    `Quote ${odd} hinzugefügt`
+  );
+
 }
 
-function updateLivePickTickers(){
-  document.querySelectorAll('[data-pick-live]').forEach(el=>{const i=Number(el.dataset.pickLive),pick=state.picks[i];if(pick)el.innerHTML=renderPickLiveTicker(pick,i);});
-  renderPicksLiveTicker();
+
+function renderSlip() {
+
+  const items =
+    $('#items');
+
+  const total =
+    $('#total');
+
+
+  if (!items || !total) {
+    return;
+  }
+
+
+  if (!slipItems.length) {
+
+    items.innerHTML = `
+
+      <div class="empty">
+        Noch keine Demo-Auswahl.
+      </div>
+
+    `;
+
+    total.textContent =
+      '—';
+
+    return;
+
+  }
+
+
+  items.innerHTML =
+    slipItems
+      .map(
+        (odd, index) => `
+
+          <div class="slip-item">
+
+            <span>
+              Auswahl ${index + 1}
+            </span>
+
+            <strong>
+              ${odd.toFixed(2)}
+            </strong>
+
+          </div>
+
+        `
+      )
+      .join('');
+
+
+  const combined =
+    slipItems.reduce(
+      (sum, odd) =>
+        sum * odd,
+      1
+    );
+
+
+  total.textContent =
+    combined.toFixed(2);
+
 }
 
-function renderPicks(){
-  const grid=$('#pickGrid');if(!grid)return;
-  if(!state.picks.length){grid.innerHTML='<div class="empty">Aktuell keine Picks veröffentlicht.</div>';return;}
-  grid.innerHTML=state.picks.map((pick,index)=>`<article class="pick-card">
-    <div class="pick-top"><span>${escapeHtml(pick.tag||'PICK')}</span><small>#${String(index+1).padStart(2,'0')}</small></div>
-    <small class="pick-sport">${escapeHtml(pick.sport||'SPORT')}</small>
-    <h3>${escapeHtml(pick.match)}</h3>
-    <div class="pick-tip"><span>🎯 TIPP</span><strong>${escapeHtml(pick.tip)}</strong></div>
-    <p>📝 ${escapeHtml(pick.reason)}</p>
-    <div class="pick-bottom"><span>💶 QUOTE</span><strong>${escapeHtml(pick.odd||'—')}</strong></div>
-    <div data-pick-live="${index}">${renderPickLiveTicker(pick,index)}</div>
-  </article>`).join('');
-  renderPicksLiveTicker();
+
+function initSlip() {
+
+  $('#clear')
+    ?.addEventListener(
+      'click',
+      () => {
+
+        slipItems = [];
+
+        renderSlip();
+
+      }
+    );
+
+
+  $('#place')
+    ?.addEventListener(
+      'click',
+      () => {
+
+        if (!slipItems.length) {
+
+          showToast(
+            'Bitte zuerst eine Demo-Auswahl anklicken.'
+          );
+
+          return;
+
+        }
+
+
+        showToast(
+          'Demo-Tipp ausgewählt · kein Echtgeld.'
+        );
+
+      }
+    );
+
+
+  renderSlip();
+
+}
+
+
+/* =========================================================
+   PICKS — LIVE EDITORIAL RENDER
+   ========================================================= */
+
+function getPickStartMs(pick) {
+  if (pick.startAt) {
+    const t = Date.parse(pick.startAt);
+    return Number.isFinite(t) ? t : null;
+  }
+  return null;
+}
+
+function getPickDurationMin(pick) {
+  const value = Number(pick.durationMin);
+  return Number.isFinite(value) && value > 0 ? value : 105;
+}
+
+function getPickLiveState(pick, now = Date.now()) {
+  const start = getPickStartMs(pick);
+
+  if (!start) return {state:'open',label:'NOCH OFFEN',minute:null,remaining:null,score:pick.score || null};
+
+  const duration = getPickDurationMin(pick) * 60000;
+  const end = start + duration;
+
+  if (now < start) return {state:'open',label:'STARTET BALD',minute:null,remaining:start-now,score:pick.score || null};
+
+  if (now < end) {
+    const minute = Math.min(getPickDurationMin(pick),Math.max(1,Math.floor((now-start)/60000)+1));
+    return {state:'live',label:'LIVE',minute,remaining:end-now,score:pick.score || ['0','0']};
+  }
+
+  return {state:'done',label:'BEENDET',minute:getPickDurationMin(pick),remaining:0,score:pick.score || ['0','0']};
+}
+
+function formatRemaining(ms) {
+  if (ms == null) return '—';
+  const total = Math.max(0,Math.floor(ms/1000));
+  const hours = Math.floor(total/3600);
+  const minutes = Math.floor((total%3600)/60);
+  const seconds = total%60;
+  return hours > 0
+    ? `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`
+    : `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+}
+
+function formatStart(pick) {
+  const start = getPickStartMs(pick);
+  if (!start) return 'Startzeit nicht festgelegt';
+  return new Intl.DateTimeFormat('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(start));
+}
+
+function getPickOutcome(pick, live) {
+  if (live.state !== 'done') return {className:'pending',icon:'◌',text:'ERGEBNIS NOCH OFFEN'};
+  const explicit = String(pick.result || pick.outcome || '').toLowerCase();
+  if (['win','won','right','correct','gewonnen','richtig'].includes(explicit)) return {className:'right',icon:'✓',text:'PICK RICHTIG'};
+  if (['loss','lost','wrong','incorrect','verloren','falsch'].includes(explicit)) return {className:'wrong',icon:'×',text:'PICK FALSCH'};
+  return {className:'pending',icon:'◌',text:'ERGEBNIS NOCH OFFEN'};
+}
+
+function renderPicks() {
+  const grid = $('#pickGrid');
+  if (!grid) return;
+
+  if (!Array.isArray(state.picks) || !state.picks.length) {
+    grid.innerHTML = `<div class="empty">Aktuell keine Picks veröffentlicht.</div>`;
+    updatePicksLiveTicker();
+    return;
+  }
+
+  const now = Date.now();
+
+  grid.innerHTML = state.picks.map((pick,index) => {
+    const live = getPickLiveState(pick,now);
+    const score = Array.isArray(live.score) ? live.score : ['0','0'];
+    const teams = String(pick.match || 'Partie').split(/\s+[—–-]\s+/);
+    const home = teams[0] || 'Team A';
+    const away = teams[1] || 'Team B';
+    const outcome = getPickOutcome(pick,live);
+
+    let timing = 'Startzeit nicht festgelegt';
+    if (live.state === 'live') timing = `Spielminute ${live.minute}'`;
+    else if (live.state === 'open' && live.remaining != null) timing = `Start in ${formatRemaining(live.remaining)}`;
+    else if (live.state === 'done') timing = 'Spiel beendet';
+
+    const statusClass = live.state === 'live' ? 'live' : live.state === 'done' ? 'done' : 'open';
+    const statusLabel = live.state === 'live' ? 'LIVE' : live.state === 'done' ? 'BEENDET' : 'VOR DEM SPIEL';
+    const timeRight = live.state === 'live'
+      ? `<strong class="pick-live-minute">${escapeHtml(timing)}</strong>`
+      : `<strong>${escapeHtml(timing)}</strong>`;
+
+    return `
+      <article class="pick-card">
+        <div class="pick-card-inner">
+          <div class="pick-card-head">
+            <span class="pick-card-tag">${escapeHtml(pick.tag || 'WINTIQ PICK')}</span>
+            <span class="pick-number">#${String(index+1).padStart(2,'0')}</span>
+          </div>
+
+          <div class="pick-sport-row">
+            <span class="pick-sport-new">${escapeHtml(pick.sport || 'SPORT')}</span>
+            <span class="pick-status ${statusClass}">
+              <i class="pick-status-dot"></i>${statusLabel}
+            </span>
+          </div>
+
+          <h3 class="pick-match">${escapeHtml(pick.match || 'Partie')}</h3>
+
+          <div class="pick-score-panel">
+            <span class="pick-team">${escapeHtml(home)}</span>
+            <strong class="pick-score">${escapeHtml(score[0])}<span>:</span>${escapeHtml(score[1])}</strong>
+            <span class="pick-team">${escapeHtml(away)}</span>
+          </div>
+
+          <div class="pick-time-row">
+            <span>${live.state === 'live' ? '⏱ LIVE' : live.state === 'done' ? '✓ STATUS' : '◷ START'}</span>
+            ${timeRight}
+          </div>
+
+          <div class="pick-tip-box">
+            <div class="pick-tip-label"><span>🎯 WINTIQ TIPP</span><span>💶 QUOTE</span></div>
+            <div class="pick-tip-value">
+              <strong>${escapeHtml(pick.tip || '—')}</strong>
+              <span class="pick-odd">${escapeHtml(pick.odd || '—')}</span>
+            </div>
+          </div>
+
+          <p class="pick-reason">📝 ${escapeHtml(pick.reason || 'Keine redaktionelle Einschätzung hinterlegt.')}</p>
+
+          <div class="pick-result ${outcome.className}">
+            <span class="pick-result-icon">${outcome.icon}</span><span>${outcome.text}</span>
+          </div>
+
+          ${live.state === 'open' ? `
+            <div class="pick-time-row" style="margin:14px 0 0;padding-top:14px;border-top:1px solid rgba(255,255,255,.06)">
+              <span>📅 START</span><strong>${escapeHtml(formatStart(pick))}</strong>
+            </div>` : ''}
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  updatePicksLiveTicker();
+}
+
+function updatePicksLiveTicker() {
+  const ticker = $('#picksLiveTicker');
+  if (!ticker) return;
+
+  const now = Date.now();
+  const items = (Array.isArray(state.picks) ? state.picks : []).map(pick => {
+    const live = getPickLiveState(pick,now);
+    const teams = String(pick.match || 'Partie').split(/\s+[—–-]\s+/);
+    const home = teams[0] || 'Team A';
+    const away = teams[1] || 'Team B';
+    const score = Array.isArray(live.score) ? `${live.score[0]}—${live.score[1]}` : '—';
+
+    if (live.state === 'live') return `<span class="livebar-item"><span class="bar-live">● LIVE</span><b>${escapeHtml(home)} ${escapeHtml(score)} ${escapeHtml(away)}</b><span>${live.minute}' · noch ${formatRemaining(live.remaining)}</span></span>`;
+    if (live.state === 'done') return `<span class="livebar-item"><span class="bar-up">✓ BEENDET</span><b>${escapeHtml(home)} ${escapeHtml(score)} ${escapeHtml(away)}</b></span>`;
+    if (live.remaining != null) return `<span class="livebar-item"><span>◷ START</span><b>${escapeHtml(home)} — ${escapeHtml(away)}</b><span>in ${formatRemaining(live.remaining)}</span></span>`;
+    return `<span class="livebar-item"><span>◷ OFFEN</span><b>${escapeHtml(home)} — ${escapeHtml(away)}</b><span>Startzeit folgt</span></span>`;
+  });
+
+  ticker.innerHTML = items.length ? items.join('') : '<span class="livebar-item">Keine veröffentlichten Picks.</span>';
 }
 
 
@@ -2741,6 +3110,31 @@ function renderAdminPicks() {
               </label>
 
 
+              <label>
+                Startzeit
+                <input
+                  data-field="startAt"
+                  data-index="${index}"
+                  type="datetime-local"
+                  value="${escapeHtml(
+                    pick.startAt
+                      ? new Date(pick.startAt).toISOString().slice(0, 16)
+                      : ''
+                  )}"
+                >
+              </label>
+
+              <label>
+                Dauer (Min.)
+                <input
+                  data-field="durationMin"
+                  data-index="${index}"
+                  type="number"
+                  min="1"
+                  value="${escapeHtml(pick.durationMin || 105)}"
+                >
+              </label>
+
               <label class="full">
 
                 🧠 Einschätzung
@@ -3246,9 +3640,13 @@ function init() {
 
 
   setInterval(
+    updateCountdown,
+    1000
+  );
+
+  setInterval(
     () => {
-      updateCountdown();
-      updateLivePickTickers();
+      renderPicks();
     },
     1000
   );
