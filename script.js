@@ -202,19 +202,48 @@ function resetRequest(){const input=$('#resetUsername'),m=$('#resetMessage');con
 function renderRequests(){const list=$('#passwordRequestList');if(!list)return;const r=JSON.parse(localStorage.getItem('wintiqPasswordRequests')||'[]');$('#pendingResetCount').textContent=r.filter(x=>x.status==='pending').length;list.innerHTML=r.length?r.map(x=>`<div class="password-request"><div class="password-request-top"><b>${esc(x.username)}</b><span>${esc(x.status)}</span></div><small>${esc(new Date(x.createdAt).toLocaleString('de-DE'))}</small></div>`).join(''):'<div class="password-request">Keine Anfragen.</div>'}
 function renderAdmin(){if(!currentUser||currentUser.role!=='admin')return;$('#aHeroTitle').value=state.heroTitle;$('#aHeroText').value=state.heroText;$('#aRelease').value=state.release;$('#aPulse').value=state.pulse;$('#adminPicks').innerHTML=state.picks.map((p,i)=>`<div class="admin-pick"><div class="password-request-top"><b>Pick ${i+1}</b><button class="mini-btn" data-remove-pick="${i}">ENTFERNEN</button></div><div class="admin-grid"><label>Sport<input data-p="${i}" data-f="sport" value="${esc(p.sport)}"></label><label>Tag<input data-p="${i}" data-f="tag" value="${esc(p.tag||'PICK')}"></label><label>Match<input data-p="${i}" data-f="match" value="${esc(p.match)}"></label><label>Tipp<input data-p="${i}" data-f="tip" value="${esc(p.tip)}"></label><label>Quote<input data-p="${i}" data-f="odd" value="${esc(p.odd||'')}"></label><label>Einschätzung<textarea data-p="${i}" data-f="reason" rows="2">${esc(p.reason||'')}</textarea></label></div></div>`).join('');$$('[data-p]').forEach(e=>e.oninput=()=>{const i=+e.dataset.p;state.picks[i][e.dataset.f]=e.value});renderRequests()}
 function bindFilters(){$$('.filter').forEach(b=>b.onclick=()=>{$$('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');activeFilter=b.dataset.filter;renderMatchBoard()})}
+function bindLogin(){
+  const form=$('#loginForm');
+  if(!form || form.dataset.bound==='1') return;
+  form.dataset.bound='1';
+  form.addEventListener('submit',e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    const u=$('#loginUser')?.value.trim()||'';
+    const pass=$('#loginPass')?.value||'';
+    const err=$('#loginError');
+    const [resolved,account]=findUser(u);
+    if(resolved && account && String(account.password)===String(pass)){
+      if(err) err.textContent='';
+      unlock(resolved,account.role);
+      return false;
+    }
+    if(err) err.textContent='Benutzername oder Passwort ist falsch.';
+    $('#loginPass')?.focus();
+  });
+}
+
 function init(){
+  // Login wird als allererstes gebunden, damit ein Fehler im Live-System
+  // niemals das Anmeldeformular unbenutzbar machen kann.
+  bindLogin();
   renderHero();updateAll();countdown();bindFilters();
-  $('#loginForm').onsubmit=e=>{e.preventDefault();const u=$('#loginUser').value.trim(),p=$('#loginPass').value;const [resolved,account]=findUser(u);if(resolved&&account.password===p){unlock(resolved,account.role);$('#loginError').textContent=''}else $('#loginError').textContent='Benutzername oder Passwort ist falsch.'};
-  $('#forgotPasswordBtn').onclick=()=>$('#resetModal').classList.remove('hidden');$('#resetClose').onclick=()=>closeModal('#resetModal');$('#sendResetRequest').onclick=resetRequest;$('#logout').onclick=lock;
-  $('#hamb').onclick=()=>$('#mobile').classList.toggle('open');$$('#mobile a').forEach(a=>a.onclick=()=>$('#mobile').classList.remove('open'));
-  $('#adminOpen').onclick=()=>{$('#adminPanel').classList.remove('hidden');renderAdmin()};$('#adminClose').onclick=()=>closeModal('#adminPanel');$('#refreshPasswordRequests').onclick=renderRequests;
-  $('#addPick').onclick=()=>{state.picks.push({id:'pick-'+Date.now(),sport:'FUSSBALL',match:'Neue Partie — Gegner',tip:'Heimsieg',reason:'Neue WINTIQ Einschätzung.',tag:'NEW',odd:'1.90'});renderAdmin();updateAll()};
-  $('#adminPicks').onclick=e=>{const b=e.target.closest('[data-remove-pick]');if(b){state.picks.splice(+b.dataset.removePick,1);renderAdmin();updateAll()}};
-  $('#saveAdmin').onclick=()=>{state.heroTitle=$('#aHeroTitle').value;state.heroText=$('#aHeroText').value;state.release=$('#aRelease').value;state.pulse=$('#aPulse').value;saveState();renderHero();updateAll();closeModal('#adminPanel');toast('Änderungen gespeichert ✓')};
-  $('#resetAdmin').onclick=()=>{state=structuredClone(DEFAULTS);saveState();renderHero();updateAll();toast('Demo zurückgesetzt')};
-  try{const s=JSON.parse(sessionStorage.getItem('wintiqUser')||'null');const [savedUser,savedAccount]=findUser(s?.user||'');if(savedUser&&savedAccount)unlock(savedUser,savedAccount.role)}catch{}
-  loadStoredFeed().then(loadApiLive).then(loadMatchDetails);
+  $('#forgotPasswordBtn')?.addEventListener('click',()=>$('#resetModal')?.classList.remove('hidden'));
+  $('#resetClose')?.addEventListener('click',()=>closeModal('#resetModal'));
+  $('#sendResetRequest')?.addEventListener('click',resetRequest);
+  $('#logout')?.addEventListener('click',lock);
+  $('#hamb')?.addEventListener('click',()=>$('#mobile')?.classList.toggle('open'));
+  $$('#mobile a').forEach(a=>a.addEventListener('click',()=>$('#mobile')?.classList.remove('open')));
+  $('#adminOpen')?.addEventListener('click',()=>{$('#adminPanel')?.classList.remove('hidden');renderAdmin()});
+  $('#adminClose')?.addEventListener('click',()=>closeModal('#adminPanel'));
+  $('#refreshPasswordRequests')?.addEventListener('click',renderRequests);
+  $('#addPick')?.addEventListener('click',()=>{state.picks.push({id:'pick-'+Date.now(),sport:'FUSSBALL',match:'Neue Partie — Gegner',tip:'Heimsieg',reason:'Neue WINTIQ Einschätzung.',tag:'NEW',odd:'1.90'});renderAdmin();updateAll()});
+  $('#adminPicks')?.addEventListener('click',e=>{const b=e.target.closest('[data-remove-pick]');if(b){state.picks.splice(+b.dataset.removePick,1);renderAdmin();updateAll()}});
+  $('#saveAdmin')?.addEventListener('click',()=>{state.heroTitle=$('#aHeroTitle').value;state.heroText=$('#aHeroText').value;state.release=$('#aRelease').value;state.pulse=$('#aPulse').value;saveState();renderHero();updateAll();closeModal('#adminPanel');toast('Änderungen gespeichert ✓')});
+  $('#resetAdmin')?.addEventListener('click',()=>{state=structuredClone(DEFAULTS);saveState();renderHero();updateAll();toast('Demo zurückgesetzt')});
+  try{const saved=JSON.parse(sessionStorage.getItem('wintiqUser')||'null');const [savedUser,savedAccount]=findUser(saved?.user||'');if(savedUser&&savedAccount)unlock(savedUser,savedAccount.role)}catch(e){sessionStorage.removeItem('wintiqUser')}
+  loadStoredFeed().then(loadApiLive).then(loadMatchDetails).catch(()=>{});
   setInterval(()=>{countdown();updateAll()},1000);
-  setInterval(async()=>{await loadStoredFeed();await loadApiLive();await loadMatchDetails()},REFRESH_MS);
+  setInterval(async()=>{try{await loadStoredFeed();await loadApiLive();await loadMatchDetails()}catch{}},REFRESH_MS);
 }
 document.addEventListener('DOMContentLoaded',init);

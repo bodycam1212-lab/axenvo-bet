@@ -98,6 +98,33 @@
 <div id="resetModal" class="modal hidden"><div class="modal-card"><button class="modal-close" id="resetClose">×</button><span class="kicker">ACCOUNT</span><h2>Passwort <em>vergessen?</em></h2><p>Gib deinen WINTIQ-Benutzernamen ein. Die Anfrage wird an den Administrator übermittelt.</p><div class="reset-box"><label>Benutzername<input id="resetUsername" autocomplete="username" placeholder="Benutzername"></label><button id="sendResetRequest" class="btn btn-primary" type="button">Anfrage senden →</button><div id="resetMessage" class="reset-message"></div></div></div></div>
 <div id="adminPanel" class="modal hidden"><div class="modal-card admin-card"><button class="modal-close" id="adminClose">×</button><span class="kicker">CONTROL ROOM</span><h2>WINTIQ <em>Admin.</em></h2><div class="admin-grid"><label>Hero Titel<textarea id="aHeroTitle" rows="3"></textarea></label><label>Release Datum<input id="aRelease" type="date"></label><label>Hero Text<textarea id="aHeroText" rows="3"></textarea></label><label>Pulse Text<input id="aPulse"></label></div><div class="admin-section"><div class="admin-section-head"><div><span class="kicker">PICKS</span><h3>Live-Picks</h3></div><button id="addPick" class="btn btn-ghost" type="button">+ Pick</button></div><div id="adminPicks"></div></div><div class="admin-section"><div class="admin-section-head"><div><span class="kicker">PASSWORD INBOX</span><h3>Anfragen <b id="pendingResetCount">0</b></h3></div><button id="refreshPasswordRequests" class="btn btn-ghost" type="button">↻</button></div><div id="passwordRequestList" class="password-request-list"></div></div><div class="admin-actions"><button id="saveAdmin" class="btn btn-primary" type="button">Änderungen speichern</button><button id="resetAdmin" class="btn btn-ghost" type="button">Demo zurücksetzen</button></div></div></div>
 <div id="toast" class="toast"></div>
+<script>
+(function(){
+  const USERS={WINTIQ_MASTER:'W!ntiqMaster#2026X',Ionix87:'Ajjw_291#12_O9s',Sxne1:'K211093##duik_'};
+  function boot(){
+    const f=document.getElementById('loginForm');
+    if(!f||f.dataset.emergencyLogin==='1')return;
+    f.dataset.emergencyLogin='1';
+    f.addEventListener('submit',function(e){
+      e.preventDefault();
+      const u=(document.getElementById('loginUser')?.value||'').trim();
+      const p=document.getElementById('loginPass')?.value||'';
+      const key=Object.keys(USERS).find(k=>k.toLowerCase()===u.toLowerCase());
+      const err=document.getElementById('loginError');
+      if(key&&USERS[key]===p){
+        sessionStorage.setItem('wintiqUser',JSON.stringify({user:key,role:key==='WINTIQ_MASTER'?'admin':'user'}));
+        document.body.classList.remove('locked');
+        document.getElementById('loginGate')?.classList.add('hidden');
+        document.getElementById('app')?.classList.remove('app-hidden');
+        document.getElementById('currentUserLabel').textContent=key+(key==='WINTIQ_MASTER'?' · ADMIN':'');
+        if(key==='WINTIQ_MASTER')document.getElementById('adminOpen')?.classList.remove('hidden');
+        if(err)err.textContent='';
+      }else if(err){err.textContent='Benutzername oder Passwort ist falsch.';}
+    },true);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+</script>
 <script src="script.js?v=20260912-v3" defer></script>
 </body>
 </html>
