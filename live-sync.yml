@@ -14,12 +14,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Sync live sports data
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Sync live data
         run: node scripts/sync-live.mjs
       - name: Commit updated live data
         run: |
-          git config user.name "wintiq-live-bot"
-          git config user.email "actions@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add live-data.json
-          git diff --cached --quiet || git commit -m "chore: update live sports data"
+          git diff --cached --quiet || git commit -m "chore: sync live sports data"
           git push

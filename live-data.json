@@ -1,99 +1,63 @@
 {
-  "updatedAt": "2026-09-12T21:45:00+02:00",
-  "source": "Verified match results · auto feed will supersede",
+  "updatedAt": "2026-09-12T23:45:00+02:00",
+  "source": "Verified + auto-sync fallback",
   "refreshSeconds": 15,
   "matches": {
     "pick-1": {
       "status": "finished",
-      "source": "Verified result",
+      "source": "ESPN / verified result",
       "providerLeague": "ger.1",
-      "eventId": null,
+      "eventId": "401884796",
       "home": "SC Freiburg",
       "away": "Borussia Mönchengladbach",
-      "score": {
-        "home": 5,
-        "away": 0
-      },
+      "score": {"home": 5, "away": 0},
       "startAt": "2026-09-12T13:30:00Z",
       "displayClock": "FT",
       "minute": "90+",
-      "lastChecked": "2026-09-12T21:45:00+02:00",
+      "lastChecked": "2026-09-12T23:45:00+02:00",
       "stale": false,
       "events": [
-        {
-          "clock": "23'",
-          "text": "Tor für SC Freiburg",
-          "team": "SC Freiburg",
-          "type": "GOAL"
-        },
-        {
-          "clock": "29'",
-          "text": "Tor für SC Freiburg",
-          "team": "SC Freiburg",
-          "type": "GOAL"
-        },
-        {
-          "clock": "77'",
-          "text": "Tor für SC Freiburg",
-          "team": "SC Freiburg",
-          "type": "GOAL"
-        },
-        {
-          "clock": "79'",
-          "text": "Tor für SC Freiburg",
-          "team": "SC Freiburg",
-          "type": "GOAL"
-        },
-        {
-          "clock": "86'",
-          "text": "Tor für SC Freiburg",
-          "team": "SC Freiburg",
-          "type": "GOAL"
-        }
+        {"clock":"23'","text":"Tor für SC Freiburg","team":"SC Freiburg","type":"GOAL"},
+        {"clock":"29'","text":"Tor für SC Freiburg","team":"SC Freiburg","type":"GOAL"},
+        {"clock":"77'","text":"Tor für SC Freiburg","team":"SC Freiburg","type":"GOAL"},
+        {"clock":"79'","text":"Tor für SC Freiburg","team":"SC Freiburg","type":"GOAL"},
+        {"clock":"86'","text":"Tor für SC Freiburg","team":"SC Freiburg","type":"GOAL"}
       ]
     },
     "pick-2": {
       "status": "finished",
-      "source": "Verified result",
+      "source": "ESPN / verified result",
       "providerLeague": "ger.2",
-      "eventId": null,
+      "eventId": "401885119",
       "home": "FC St. Pauli",
       "away": "VfL Wolfsburg",
-      "score": {
-        "home": 1,
-        "away": 0
-      },
+      "score": {"home": 1, "away": 0},
       "startAt": "2026-09-12T18:30:00Z",
       "displayClock": "FT",
       "minute": "90+",
-      "lastChecked": "2026-09-12T21:45:00+02:00",
+      "lastChecked": "2026-09-12T23:45:00+02:00",
       "stale": false,
       "events": [
-        {
-          "clock": "89'",
-          "text": "Joel Fujita trifft für St. Pauli",
-          "team": "FC St. Pauli",
-          "type": "GOAL"
-        }
+        {"clock":"88'","text":"Joel Fujita trifft für St. Pauli","team":"FC St. Pauli","type":"GOAL"}
       ]
     },
     "pick-3": {
       "status": "finished",
-      "source": "Verified result",
+      "source": "ESPN / verified result",
       "providerLeague": "esp.1",
-      "eventId": null,
+      "eventId": "401882881",
       "home": "Racing Santander",
       "away": "Deportivo Alavés",
-      "score": {
-        "home": 2,
-        "away": 1
-      },
-      "startAt": "2026-09-12T14:00:00Z",
+      "score": {"home": 2, "away": 1},
+      "startAt": "2026-09-12T19:00:00Z",
       "displayClock": "FT",
       "minute": "90+",
-      "lastChecked": "2026-09-12T21:45:00+02:00",
+      "lastChecked": "2026-09-12T23:45:00+02:00",
       "stale": false,
-      "events": []
+      "events": [
+        {"clock":"38'","text":"Racing Santander erzielt den Ausgleich","team":"Racing Santander","type":"GOAL"},
+        {"clock":"53'","text":"Racing Santander geht in Führung","team":"Racing Santander","type":"GOAL"}
+      ]
     }
   }
 }
