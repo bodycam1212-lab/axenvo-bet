@@ -1,0 +1,1380 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<meta name="description" content="WINTIQ — private sports intelligence demo">
+<title>WINTIQ BET — Private Demo</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="styles.css">
+
+<style>
+/* =========================================================
+   GITHUB ADMIN
+   ========================================================= */
+
+.github-token-field {
+  grid-column: 1 / -1;
+}
+
+.github-token-field input {
+  width: 100%;
+  min-height: 54px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.github-test-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.github-status {
+  font-size: 13px;
+  line-height: 1.45;
+  opacity: .9;
+}
+
+.github-status.ok {
+  color: #b6ff4a;
+}
+
+.github-status.error {
+  color: #ff7777;
+}
+
+.github-status.loading {
+  opacity: .65;
+}
+
+
+/* =========================================================
+   PASSWORD RESET
+   ========================================================= */
+
+.forgot-password {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.forgot-password button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  opacity: .8;
+  font: inherit;
+}
+
+.forgot-password button:hover {
+  opacity: 1;
+}
+
+.reset-box {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.reset-box input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.reset-message {
+  min-height: 20px;
+  font-size: 13px;
+}
+
+.reset-message.error {
+  color: #ff7777;
+}
+
+.reset-message.ok {
+  color: #b6ff4a;
+}
+
+
+/* =========================================================
+   PASSWORD REQUEST INBOX
+   ========================================================= */
+
+.password-inbox {
+  margin-top: 30px;
+  border-top: 1px solid rgba(255,255,255,.1);
+  padding-top: 24px;
+}
+
+.password-inbox-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.password-inbox-head strong {
+  font-size: 18px;
+}
+
+.password-inbox-head small {
+  opacity: .65;
+}
+
+.password-request-list {
+  display: grid;
+  gap: 12px;
+}
+
+.password-request {
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.025);
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.password-request.pending {
+  border-color: rgba(182,255,74,.35);
+}
+
+.password-request.done {
+  opacity: .55;
+}
+
+.password-request-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.password-request-user {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.password-request-status {
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: 99px;
+  border: 1px solid rgba(255,255,255,.15);
+}
+
+.password-request-status.pending {
+  color: #b6ff4a;
+}
+
+.password-request-status.done {
+  color: #aaa;
+}
+
+.password-request-meta {
+  font-size: 12px;
+  opacity: .65;
+  margin-bottom: 14px;
+}
+
+.password-request-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.password-change-box {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(0,0,0,.2);
+  display: grid;
+  gap: 10px;
+}
+
+.password-change-box input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.password-inbox-empty {
+  padding: 18px;
+  border: 1px dashed rgba(255,255,255,.15);
+  border-radius: 10px;
+  opacity: .6;
+  text-align: center;
+}
+
+.inbox-count {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 99px;
+  background: #b6ff4a;
+  color: #111;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+
+/* =========================================================
+   USER INFO
+   ========================================================= */
+
+.current-user {
+  font-size: 12px;
+  opacity: .7;
+  margin-right: 5px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* =========================================================
+   FINAL PICKS REDESIGN
+   Legacy sports/live-market/bet-slip areas are removed from the page.
+   ========================================================= */
+#sports,#live{display:none!important}
+
+.picks{position:relative}
+.picks-live-ticker{margin:0 0 24px;border:1px solid rgba(255,255,255,.10);border-radius:18px;background:rgba(255,255,255,.025);overflow:hidden}
+.picks-live-ticker-track{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));min-height:66px}
+.picks-live-ticker-item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 16px;border-right:1px solid rgba(255,255,255,.08);font-size:12px}
+.picks-live-ticker-item:last-child{border-right:0}
+.picks-live-ticker-item strong{font-size:15px;font-variant-numeric:tabular-nums}
+.picks-live-ticker-item.live .ticker-state{color:#ff6262;font-weight:800}
+.picks-live-ticker-item.upcoming .ticker-state{opacity:.65}
+.picks-live-ticker-item.finished .ticker-state{opacity:.45}
+.picks-live-ticker-item .ticker-state{white-space:nowrap;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.picks-live-caption{display:flex;justify-content:space-between;align-items:center;gap:18px;margin:0 0 12px;padding:0 2px;color:rgba(255,255,255,.48);font-size:10px;letter-spacing:.10em;text-transform:uppercase}
+.picks-live-caption span:first-child{color:rgba(255,255,255,.82);font-weight:800}
+.live-mini-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff4d4d;box-shadow:0 0 0 0 rgba(255,77,77,.65);animation:livePulse 1.15s infinite;margin-right:7px;vertical-align:middle}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(255,77,77,.65);opacity:1}70%{box-shadow:0 0 0 8px rgba(255,77,77,0);opacity:.55}100%{box-shadow:0 0 0 0 rgba(255,77,77,0);opacity:1}}
+.pick-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:stretch}
+.pick-card{position:relative;overflow:hidden;min-height:100%;padding:22px!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:22px!important;background:linear-gradient(150deg,rgba(255,255,255,.055),rgba(255,255,255,.018))!important;box-shadow:0 20px 60px rgba(0,0,0,.20)!important}
+.pick-card:before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:rgba(182,255,74,.85)}
+.pick-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+.pick-top>span{display:inline-flex!important;align-items:center;padding:6px 9px!important;border-radius:999px!important;background:rgba(182,255,74,.10)!important;color:#b6ff4a!important;font-size:9px!important;font-weight:800!important;letter-spacing:.10em}
+.pick-top>small{opacity:.34;font-variant-numeric:tabular-nums}
+.pick-sport{display:block;margin-bottom:8px;font-size:10px!important;letter-spacing:.12em;text-transform:uppercase;opacity:.48}
+.pick-card h3{margin:0 0 16px!important;font-size:20px!important;line-height:1.18!important}
+.pick-tip{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:14px!important;margin:0 0 15px!important;padding:14px 15px!important;border:1px solid rgba(255,255,255,.09)!important;border-radius:15px!important;background:rgba(0,0,0,.20)!important}
+.pick-tip span{font-size:9px!important;letter-spacing:.11em!important;opacity:.45}
+.pick-tip strong{font-size:15px!important;text-align:right}
+.pick-card>p{margin:0 0 15px!important;font-size:13px!important;line-height:1.55!important;opacity:.70}
+.pick-bottom{display:flex!important;align-items:center!important;justify-content:space-between!important;padding-top:14px!important;border-top:1px solid rgba(255,255,255,.08)!important;font-size:10px!important;letter-spacing:.10em!important;opacity:.62}
+.pick-bottom strong{font-size:18px!important;letter-spacing:0!important;opacity:1!important}
+.pick-live{margin-top:16px!important;padding:15px!important;border:1px solid rgba(255,255,255,.09)!important;border-radius:16px!important;background:rgba(0,0,0,.22)!important}
+.pick-live-head{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:10px!important;margin-bottom:12px!important;font-size:10px!important;letter-spacing:.08em!important;text-transform:uppercase}
+.pick-live-dot{font-weight:800!important}
+.pick-live-dot.live{color:#ff5b5b!important;display:inline-flex;align-items:center;gap:6px}
+.pick-live-dot.live:before{content:"";width:7px;height:7px;border-radius:50%;background:#ff4d4d;box-shadow:0 0 0 0 rgba(255,77,77,.65);animation:livePulse 1.15s infinite}
+.pick-live-dot.pending{color:rgba(255,255,255,.58)!important}
+.pick-live-dot.done{color:rgba(255,255,255,.42)!important}
+.pick-live-score{display:grid!important;grid-template-columns:1fr auto 1fr!important;align-items:center!important;gap:10px!important;font-size:12px!important;font-weight:700!important}
+.pick-live-score span:last-child{text-align:right}
+.pick-live-score strong{font-size:24px!important;font-variant-numeric:tabular-nums!important;letter-spacing:.02em}
+.pick-live-meta{display:flex!important;justify-content:space-between!important;gap:10px!important;margin-top:10px!important;padding-top:10px!important;border-top:1px solid rgba(255,255,255,.07)!important;font-size:10px!important;opacity:.58!important;font-variant-numeric:tabular-nums}
+.pick-live-result{margin-top:10px!important;padding-top:10px!important;border-top:1px solid rgba(255,255,255,.07)!important;font-size:11px!important;font-weight:800!important;letter-spacing:.04em}
+.pick-live-result.correct{color:#b6ff4a!important}.pick-live-result.wrong{color:#ff6868!important}.pick-live-result.pending{color:rgba(255,255,255,.48)!important}.pick-live-result.live{color:#ff6868!important}
+.pick-start{margin-top:10px!important;padding-top:10px!important;border-top:1px solid rgba(255,255,255,.06)!important;font-size:10px!important;opacity:.62!important}
+.pick-live-score strong{white-space:nowrap}
+@media(max-width:1050px){.pick-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.picks-live-ticker-track{grid-template-columns:1fr}}
+@media(max-width:680px){.pick-grid{grid-template-columns:1fr!important}.pick-card{padding:18px!important}.picks-live-caption{align-items:flex-start;flex-direction:column;gap:6px}.picks-live-ticker-item{border-right:0;border-bottom:1px solid rgba(255,255,255,.08)}.picks-live-ticker-item:last-child{border-bottom:0}}
+
+</style>
+
+
+<style id="wintiq-final-overrides">
+/* FINAL CLEAN UI — legacy market/live/bet-slip layouts are gone */
+.legacy-sports, .legacy-live, .sports-filter, .market-section, .bet-slip, .betslip, #betSlip, #sports, #live { display:none !important; }
+
+/* Picks: spacious editorial cards */
+.wintiq-picks { padding: 96px 0 110px !important; }
+.wintiq-picks .section-top { margin-bottom: 34px !important; align-items:flex-end !important; }
+.wintiq-picks .section-top h2 { margin:0 !important; }
+.wintiq-picks .pick-note { white-space:nowrap; }
+.picks-live-ticker {
+  min-height:74px; margin:0 0 34px !important; border:1px solid rgba(255,255,255,.10);
+  border-radius:20px; background:linear-gradient(90deg,rgba(255,255,255,.045),rgba(255,255,255,.018));
+  box-shadow:0 18px 55px rgba(0,0,0,.18); overflow:hidden;
+}
+.picks-live-ticker-track { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); min-height:74px; }
+.picks-live-ticker-item {
+  min-width:0; display:grid; grid-template-columns:auto 1fr; grid-template-rows:auto auto; column-gap:12px; row-gap:5px;
+  align-content:center; padding:13px 18px; border-right:1px solid rgba(255,255,255,.08);
+}
+.picks-live-ticker-item:last-child{border-right:0}
+.picks-live-ticker-item .ticker-state{grid-row:1 / span 2; align-self:center; font-size:9px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; white-space:nowrap}
+.picks-live-ticker-item strong{font-size:14px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.picks-live-ticker-item small{font-size:10px; opacity:.52; white-space:nowrap}
+.picks-live-ticker-item.live .ticker-state{color:#ff4d4d}
+.picks-live-ticker-item.live .ticker-state::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff4d4d;margin-right:6px;animation:livePulse 1.15s infinite}
+.picks-live-ticker-item.upcoming .ticker-state{color:#b6ff4a}
+.picks-live-ticker-item.finished .ticker-state{color:rgba(255,255,255,.45)}
+
+.wintiq-picks .pick-grid { grid-template-columns:repeat(3,minmax(0,1fr)) !important; gap:24px !important; }
+.wintiq-picks .pick-card { padding:0 !important; min-height:0 !important; border-radius:24px !important; }
+.wintiq-picks .pick-card > .pick-card-inner { padding:26px !important; }
+.wintiq-picks .pick-top { margin-bottom:20px !important; }
+.wintiq-picks .pick-sport { margin-bottom:10px !important; }
+.wintiq-picks .pick-card h3 { min-height:50px; margin-bottom:20px !important; font-size:20px !important; line-height:1.35 !important; }
+.wintiq-picks .pick-tip { min-height:58px; margin-bottom:18px !important; }
+.wintiq-picks .pick-card > p { min-height:84px; margin-bottom:18px !important; line-height:1.7 !important; }
+.wintiq-picks .pick-bottom { min-height:52px; }
+.wintiq-picks .pick-live { margin-top:18px !important; }
+.wintiq-picks .pick-live-score { min-height:44px; }
+.wintiq-picks .pick-live-score strong { font-size:25px !important; }
+.wintiq-picks .pick-live-meta { line-height:1.5; }
+.wintiq-picks .pick-live-result { line-height:1.4; }
+@media(max-width:1050px){.wintiq-picks .pick-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}.picks-live-ticker-track{grid-template-columns:1fr}}
+@media(max-width:680px){.wintiq-picks{padding:72px 0 82px !important}.wintiq-picks .section-top{align-items:flex-start !important;gap:16px}.wintiq-picks .pick-note{white-space:normal}.wintiq-picks .pick-grid{grid-template-columns:1fr !important}.wintiq-picks .pick-card h3,.wintiq-picks .pick-card > p{min-height:0}.picks-live-ticker-item{border-right:0;border-bottom:1px solid rgba(255,255,255,.08)}.picks-live-ticker-item:last-child{border-bottom:0}}
+</style>
+
+
+<style id="wintiq-clean-live-picks">
+  /* No legacy market UI */
+  .ticker,
+  .legacy-sports,
+  .legacy-live,
+  .sports-filter,
+  .market-section,
+  .bet-slip,
+  .betslip,
+  #betSlip,
+  #sports,
+  #live { display:none !important; }
+
+  .wintiq-picks { padding: 92px 0 112px !important; }
+  .wintiq-picks .section-top { margin-bottom: 30px !important; }
+
+  .wintiq-picks .pick-grid {
+    display:grid !important;
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+    gap:24px !important;
+    align-items:stretch;
+  }
+  .wintiq-picks .pick-card {
+    min-width:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    border-radius:24px !important;
+  }
+  .wintiq-picks .pick-card > .pick-card-inner { padding:26px !important; }
+  .wintiq-picks .pick-card h3 {
+    min-height:54px;
+    margin:0 0 20px !important;
+    line-height:1.35 !important;
+  }
+  .wintiq-picks .pick-card > p {
+    min-height:88px;
+    margin:0 0 20px !important;
+    line-height:1.72 !important;
+  }
+
+  /* Animated live ticker: the content keeps moving without a page reload. */
+  .picks-live-ticker {
+    position:relative;
+    margin:0 0 34px !important;
+    min-height:76px;
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:20px;
+    background:linear-gradient(90deg,rgba(255,255,255,.045),rgba(255,255,255,.018));
+    box-shadow:0 18px 55px rgba(0,0,0,.18);
+    overflow:hidden;
+  }
+  .picks-live-ticker::before,
+  .picks-live-ticker::after {
+    content:"";
+    position:absolute;
+    top:0;
+    bottom:0;
+    width:60px;
+    z-index:3;
+    pointer-events:none;
+  }
+  .picks-live-ticker::before { left:0; background:linear-gradient(90deg,#080a0d,transparent); }
+  .picks-live-ticker::after { right:0; background:linear-gradient(270deg,#080a0d,transparent); }
+  .picks-ticker-viewport { overflow:hidden; width:100%; }
+  .picks-ticker-track {
+    display:flex;
+    width:max-content;
+    min-height:76px;
+    will-change:transform;
+    animation:picksTickerMove 28s linear infinite;
+  }
+  .picks-ticker-set { display:flex; flex-shrink:0; }
+  .picks-live-ticker-item {
+    width:min(390px,32vw);
+    min-width:290px;
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr);
+    grid-template-rows:auto auto;
+    column-gap:12px;
+    row-gap:4px;
+    align-content:center;
+    padding:14px 24px;
+    border-right:1px solid rgba(255,255,255,.08);
+  }
+  .picks-live-ticker-item .ticker-state {
+    grid-row:1 / span 2;
+    align-self:center;
+    white-space:nowrap;
+    font-size:9px;
+    font-weight:900;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+  .picks-live-ticker-item strong {
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:14px;
+    line-height:1.2;
+  }
+  .picks-live-ticker-item small {
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:10px;
+    opacity:.52;
+  }
+  .picks-live-ticker-item.live .ticker-state { color:#ff4d4d; }
+  .picks-live-ticker-item.live .ticker-state::before {
+    content:"";
+    display:inline-block;
+    width:7px;
+    height:7px;
+    margin-right:7px;
+    border-radius:50%;
+    background:#ff4d4d;
+    animation:livePulse 1.15s infinite;
+    vertical-align:1px;
+  }
+  .picks-live-ticker-item.upcoming .ticker-state { color:#b6ff4a; }
+  .picks-live-ticker-item.finished .ticker-state { color:rgba(255,255,255,.45); }
+  @keyframes picksTickerMove {
+    from { transform:translate3d(0,0,0); }
+    to { transform:translate3d(-50%,0,0); }
+  }
+  .picks-live-ticker:hover .picks-ticker-track { animation-play-state:paused; }
+
+  @media (max-width:1050px) {
+    .wintiq-picks .pick-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+    .picks-live-ticker-item { width:360px; }
+  }
+  @media (max-width:680px) {
+    .wintiq-picks { padding:72px 0 82px !important; }
+    .wintiq-picks .pick-grid { grid-template-columns:1fr !important; }
+    .wintiq-picks .pick-card h3,
+    .wintiq-picks .pick-card > p { min-height:0; }
+    .picks-live-ticker-item { width:310px; min-width:310px; padding:13px 18px; }
+    .picks-ticker-track { animation-duration:24s; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    .picks-ticker-track { animation:none; }
+  }
+</style>
+
+<style id="wintiq-hard-clean">
+/* HARD CLEAN: legacy UI must never be visible, even if an old script injects it. */
+html body .ticker,
+html body .top-ticker,
+html body .live-ticker:not(#picksLiveTicker),
+html body .sports-filter,
+html body .market-section,
+html body .bet-slip,
+html body .betslip,
+html body #betSlip,
+html body #sports,
+html body #live,
+html body [class*="bet-slip"],
+html body [id*="bet-slip"],
+html body [class*="sports-filter"],
+html body [class*="market-section"] { display:none !important; }
+</style>
+
+<style id="wintiq-v3-premium">
+  /* ===== WINTIQ V3: clean, premium live editorial UI ===== */
+  :root{--acid:#b6ff3f;--ink:#07090c;--panel:#0d1116;--line:rgba(255,255,255,.10);--muted:rgba(240,244,250,.58);--red:#ff4d57}
+  body{overflow-x:hidden}
+  .wintiq-picks,.picks{position:relative;max-width:1440px;margin:0 auto;padding:92px 42px 120px!important}
+  .wintiq-picks .section-top,.picks .section-top{display:flex!important;justify-content:space-between!important;align-items:flex-end!important;gap:28px!important;margin-bottom:28px!important}
+  .wintiq-picks .section-top h2,.picks .section-top h2{font-size:clamp(48px,6vw,82px)!important;line-height:.95!important;letter-spacing:-.055em!important}
+  .wintiq-picks .section-top small,.picks .section-top small{display:block;margin-bottom:10px;color:var(--muted);font-size:10px;letter-spacing:.16em;font-weight:800}
+  .pick-note{padding:10px 14px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:11px;white-space:nowrap}
+
+  .picks-live-ticker{position:relative!important;margin:0 0 36px!important;border:1px solid var(--line)!important;border-radius:22px!important;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018))!important;box-shadow:0 24px 80px rgba(0,0,0,.28)!important;overflow:hidden!important}
+  .picks-live-ticker:before{content:"LIVE PICK FEED";position:absolute;z-index:5;left:0;top:0;height:100%;display:flex;align-items:center;padding:0 18px;background:linear-gradient(90deg,#080b0f 72%,transparent);font-size:9px;font-weight:900;letter-spacing:.16em;color:var(--muted);pointer-events:none}
+  .picks-ticker-viewport{overflow:hidden!important;width:100%!important;padding-left:116px}
+  .picks-ticker-track{display:flex!important;width:max-content!important;min-height:82px!important;animation:picksTickerMove 30s linear infinite!important}
+  .picks-ticker-set{display:flex!important;flex-shrink:0!important}
+  .picks-live-ticker-item{width:360px!important;min-width:360px!important;min-height:82px!important;display:grid!important;grid-template-columns:auto 1fr!important;grid-template-rows:auto auto!important;align-content:center!important;column-gap:12px!important;row-gap:5px!important;padding:14px 22px!important;border-right:1px solid var(--line)!important}
+  .picks-live-ticker-item .ticker-state{grid-row:1/span 2!important;align-self:center!important;font-size:9px!important;font-weight:900!important;letter-spacing:.12em!important;white-space:nowrap!important}
+  .picks-live-ticker-item strong{font-size:14px!important;line-height:1.25!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .picks-live-ticker-item small{font-size:10px!important;color:var(--muted)!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  .picks-live-ticker-item.live .ticker-state{color:var(--red)!important}.picks-live-ticker-item.upcoming .ticker-state{color:var(--acid)!important}.picks-live-ticker-item.finished .ticker-state{color:rgba(255,255,255,.45)!important}
+  .picks-live-ticker-item.live .ticker-state:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);margin-right:7px;box-shadow:0 0 0 0 rgba(255,77,87,.7);animation:livePulse 1s infinite}
+  @keyframes picksTickerMove{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
+
+  .picks-live-caption{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:20px!important;margin:0 0 18px!important;padding:0 3px!important;color:var(--muted)!important;font-size:10px!important;letter-spacing:.11em!important;text-transform:uppercase!important}
+  .picks-live-caption span:first-child{color:#fff!important;font-weight:900!important}
+
+  .wintiq-picks .pick-grid,.picks .pick-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:22px!important;align-items:stretch!important}
+  .wintiq-picks .pick-card,.picks .pick-card{min-width:0!important;padding:0!important;border:1px solid var(--line)!important;border-radius:26px!important;background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018))!important;box-shadow:0 22px 70px rgba(0,0,0,.24)!important;overflow:hidden!important;transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease!important}
+  .wintiq-picks .pick-card:hover,.picks .pick-card:hover{transform:translateY(-4px);border-color:rgba(182,255,63,.28)!important;box-shadow:0 28px 90px rgba(0,0,0,.34)!important}
+  .wintiq-picks .pick-card:before,.picks .pick-card:before{content:"";display:block;height:3px;background:linear-gradient(90deg,var(--acid),rgba(182,255,63,0))}
+  .wintiq-picks .pick-card-inner,.picks .pick-card-inner{padding:26px!important}
+  .pick-top{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:14px!important;margin-bottom:18px!important}
+  .pick-top>span{padding:6px 9px!important;border-radius:999px!important;background:rgba(182,255,63,.11)!important;color:var(--acid)!important;font-size:9px!important;font-weight:900!important;letter-spacing:.12em!important}
+  .pick-top>small{color:var(--muted)!important;font-size:10px!important}
+  .pick-sport{display:block!important;margin-bottom:10px!important;color:var(--muted)!important;font-size:9px!important;letter-spacing:.16em!important;font-weight:900!important}
+  .wintiq-picks .pick-card h3,.picks .pick-card h3{min-height:0!important;margin:0 0 20px!important;font-size:21px!important;line-height:1.28!important;letter-spacing:-.02em!important}
+  .pick-tip{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:16px!important;margin:0 0 16px!important;padding:15px 16px!important;border:1px solid var(--line)!important;border-radius:16px!important;background:rgba(0,0,0,.20)!important}
+  .pick-tip span{flex:0 0 auto!important;font-size:9px!important;letter-spacing:.12em!important;color:var(--muted)!important;font-weight:900!important}.pick-tip strong{font-size:14px!important;text-align:right!important;line-height:1.3!important}
+  .wintiq-picks .pick-card>p,.picks .pick-card>p{min-height:0!important;margin:0 0 18px!important;color:rgba(245,247,250,.78)!important;font-size:13px!important;line-height:1.72!important;letter-spacing:0!important}
+  .pick-bottom{display:flex!important;justify-content:space-between!important;align-items:center!important;padding:12px 0 0!important;border-top:1px solid rgba(255,255,255,.07)!important}.pick-bottom span{font-size:9px!important;letter-spacing:.12em!important;color:var(--muted)!important;font-weight:900!important}.pick-bottom strong{font-size:18px!important}
+
+  .pick-live{margin-top:18px!important;padding:18px!important;border:1px solid rgba(255,255,255,.09)!important;border-radius:18px!important;background:rgba(0,0,0,.24)!important}
+  .pick-live-head{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:10px!important;margin-bottom:16px!important}.pick-live-head>span:last-child{color:var(--muted)!important;font-size:9px!important;letter-spacing:.12em!important;font-weight:900!important}
+  .pick-live-dot{font-size:9px!important;letter-spacing:.11em!important;font-weight:900!important}.pick-live-dot.live{color:var(--red)!important}.pick-live-dot.pending{color:var(--acid)!important}.pick-live-dot.done{color:var(--muted)!important}
+  .pick-live-score{display:grid!important;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)!important;align-items:center!important;gap:12px!important}.pick-live-score span{font-size:12px!important;font-weight:800!important;line-height:1.3!important}.pick-live-score span:last-child{text-align:right!important}.pick-live-score strong{font-size:27px!important;line-height:1!important;white-space:nowrap!important;font-variant-numeric:tabular-nums!important}.pick-live-score strong i{font-style:normal;color:var(--muted)!important;margin:0 3px!important}
+  .pick-live-meta{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;margin-top:14px!important;padding-top:12px!important;border-top:1px solid rgba(255,255,255,.07)!important;font-size:10px!important;line-height:1.45!important;color:var(--muted)!important;font-variant-numeric:tabular-nums!important}.pick-live-meta span:last-child{text-align:right!important}
+  .pick-live-result{margin-top:12px!important;padding:10px 0 0!important;border-top:1px solid rgba(255,255,255,.07)!important;font-size:10px!important;font-weight:900!important;letter-spacing:.08em!important}.pick-live-result.correct{color:var(--acid)!important}.pick-live-result.wrong{color:var(--red)!important}.pick-live-result.pending{color:var(--muted)!important}
+  .pick-start{margin-top:10px!important;padding-top:10px!important;border-top:1px solid rgba(255,255,255,.06)!important;color:var(--muted)!important;font-size:10px!important;line-height:1.5!important}.pick-start b{display:block;margin-top:4px;color:#fff!important;font-size:12px!important;line-height:1.35!important}
+  .live-calendar{display:inline-flex;align-items:center;gap:7px;margin-top:6px;color:var(--muted);font-size:10px}
+  @media(max-width:1100px){.wintiq-picks,.picks{padding-left:24px!important;padding-right:24px!important}.wintiq-picks .pick-grid,.picks .pick-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+  @media(max-width:700px){.wintiq-picks,.picks{padding:70px 18px 84px!important}.wintiq-picks .section-top,.picks .section-top{align-items:flex-start!important;flex-direction:column!important}.pick-note{white-space:normal!important}.wintiq-picks .pick-grid,.picks .pick-grid{grid-template-columns:1fr!important}.picks-live-ticker:before{display:none}.picks-ticker-viewport{padding-left:0}.picks-live-ticker-item{width:320px!important;min-width:320px!important}.picks-live-caption{align-items:flex-start!important;flex-direction:column!important;gap:7px!important}.pick-live-meta{grid-template-columns:1fr!important}.pick-live-meta span:last-child{text-align:left!important}}
+  @media(prefers-reduced-motion:reduce){.picks-ticker-track,.pick-live-dot.live:before,.picks-live-ticker-item.live .ticker-state:before{animation:none!important}}
+</style>
+
+</head>
+
+<body class="locked">
+
+
+<!-- =========================================================
+     LOGIN
+     ========================================================= -->
+
+<div id="loginGate" class="gate">
+
+  <div class="gate-glow"></div>
+
+  <div class="gate-card">
+
+    <div class="gate-logo">
+      <span>W</span>
+      <b>WINTIQ</b>
+      <em>BET</em>
+    </div>
+
+    <div class="gate-kicker">
+      PRIVATE SPORTS INTELLIGENCE
+    </div>
+
+    <h1>
+      Enter the<br>
+      <span>arena.</span>
+    </h1>
+
+    <p>
+      Diese Demo ist geschützt. Zugang nur mit Benutzername und Passwort.
+    </p>
+
+    <form id="loginForm">
+
+      <label>
+        Benutzername
+        <input
+          id="loginUser"
+          autocomplete="username"
+          placeholder="Benutzername"
+          required
+        >
+      </label>
+
+      <label>
+        Passwort
+        <input
+          id="loginPass"
+          type="password"
+          autocomplete="current-password"
+          placeholder="Passwort"
+          required
+        >
+      </label>
+
+      <button class="primary" type="submit">
+        WINTIQ öffnen <span>↗</span>
+      </button>
+
+      <small id="loginError"></small>
+
+      <div class="forgot-password">
+        <button id="forgotPasswordBtn" type="button">
+          Passwort vergessen?
+        </button>
+      </div>
+
+    </form>
+
+    <div class="gate-foot">
+      <span>18+</span>
+      <span>PRIVATE DEMO</span>
+      <span>NO REAL MONEY</span>
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- =========================================================
+     APP
+     ========================================================= -->
+
+<div id="app" class="app-hidden">
+
+  <!-- TOPBAR -->
+
+  <div class="topbar">
+
+    <div>
+      <span class="live-dot"></span>
+      <b>WINTIQ PULSE</b>
+      <span id="pulseText">Live intelligence · Demo feed</span>
+    </div>
+
+    <div class="top-actions">
+      <span class="current-user" id="currentUserLabel"></span>
+      <span>PRIVATE DEMO</span>
+      <button id="adminOpen" class="hidden">ADMIN</button>
+      <button id="logout">LOCK</button>
+    </div>
+
+  </div>
+
+
+  <!-- NAV -->
+
+  <header class="nav">
+
+    <button class="hamb" id="hamb">☰</button>
+
+    <a class="brand" href="#top">
+      <span>W</span>
+      <b>WINTIQ</b>
+      <em>BET</em>
+    </a>
+
+    <nav>
+      <a href="#picks">Picks</a>
+      <a href="#events">Events</a>
+      <a href="#edge">Edge</a>
+    </nav>
+
+    <div class="nav-actions">
+      <button id="search">⌕</button>
+      <a class="nav-cta" href="#picks">Picks ansehen</a>
+    </div>
+
+  </header>
+
+
+  <!-- MOBILE NAV -->
+
+  <div class="mobile" id="mobile">
+    <a href="#picks">Picks</a>
+    <a href="#events">Events</a>
+    <a href="#edge">Edge</a>
+  </div>
+
+
+  <main id="top">
+
+    <!-- HERO -->
+
+    <section class="hero">
+
+      <div class="hero-bg"></div>
+      <div class="hero-shade"></div>
+      <div class="hero-grid"></div>
+
+      <div class="hero-copy">
+
+        <div class="eyebrow">
+          <span class="pulse-dot"></span>
+          WINTIQ ORIGINAL · PRIVATE ACCESS
+        </div>
+
+        <div class="count">
+          RELEASE
+          <strong id="timer">00 : 00 : 00 : 00</strong>
+        </div>
+
+        <h1 id="heroTitle">
+          SPORT.<br>
+          <span>DATA.</span><br>
+          MOMENTUM.
+        </h1>
+
+        <p id="heroText">
+          Ein radikales Sports-Interface für schnelle Entscheidungen,
+          klare Daten und redaktionelle Picks.
+        </p>
+
+        <div class="hero-buttons">
+
+          <a class="primary" href="#picks">
+            Picks entdecken <span>→</span>
+          </a>
+
+          <a class="ghost" href="#picks">
+            Unsere Picks <span>↗</span>
+          </a>
+
+        </div>
+
+      </div>
+
+      <div class="hero-meta">
+        <span>01 / 05</span>
+        <span>WINTIQ LAB</span>
+        <span id="releaseMeta">11.09.2026</span>
+      </div>
+
+      <div class="hero-card">
+        <small>LIVE INDEX</small>
+        <strong>94.7</strong>
+        <span>MARKET MOMENTUM ↑</span>
+      </div>
+
+    </section>
+
+
+    <!-- PICKS -->
+
+    <section class="picks" id="picks">
+
+      <div class="section-top">
+
+        <div>
+
+          <small>WINTIQ EDITORIAL</small>
+
+          <h2>
+            Unsere <span>Picks.</span>
+          </h2>
+
+        </div>
+
+        <div class="pick-note">
+          Nur von WINTIQ veröffentlicht
+        </div>
+
+      </div>
+
+      <div class="picks-live-ticker" id="picksLiveTicker" aria-live="polite"></div>
+
+      <div class="picks-live-caption">
+        <span><i class="live-mini-dot"></i> LIVE-TRACKING</span>
+        <span>Spielstand · Spielminute · Restzeit · Tippstatus</span>
+      </div>
+
+      <div id="pickGrid" class="pick-grid"></div>
+
+    </section>
+
+
+    <!-- EVENTS -->
+
+    <section class="events" id="events">
+
+      <div class="section-top">
+
+        <div>
+
+          <small>VISUAL MATCHDAY</small>
+
+          <h2>
+            Top <span>Events.</span>
+          </h2>
+
+        </div>
+
+        <a class="arrow-link" href="#live">
+          Alle Märkte →
+        </a>
+
+      </div>
+
+
+      <div class="event-grid">
+
+        <article class="event e1">
+
+          <div>
+
+            <small>FOOTBALL · 11.09.2026</small>
+
+            <h3>
+              Der perfekte<br>
+              Matchday.
+            </h3>
+
+            <a href="#live">
+              Märkte entdecken →
+            </a>
+
+          </div>
+
+        </article>
+
+
+        <article class="event e2">
+
+          <div>
+
+            <small>TENNIS · ATP</small>
+
+            <h3>
+              Every point<br>
+              counts.
+            </h3>
+
+            <a href="#picks">
+              Pick ansehen →
+            </a>
+
+          </div>
+
+        </article>
+
+
+        <article class="event e3">
+
+          <div>
+
+            <small>BASKETBALL · NBA</small>
+
+            <h3>
+              Game<br>
+              time.
+            </h3>
+
+            <a href="#live">
+              Ansehen →
+            </a>
+
+          </div>
+
+        </article>
+
+      </div>
+
+    </section>
+
+
+    <!-- EDGE -->
+
+    <section class="edge" id="edge">
+
+      <div class="edge-copy">
+
+        <small>WINTIQ EDGE</small>
+
+        <h2>
+          Built for<br>
+          <span>the moment.</span>
+        </h2>
+
+        <p>
+          Editorial statt Chaos: Live-Kontext, Daten und unsere
+          redaktionellen Einschätzungen auf einer Oberfläche.
+        </p>
+
+
+        <div class="features">
+
+          <div>
+            <b>01</b>
+            <strong>Live-first</strong>
+            <small>
+              Der aktuelle Spielmoment steht im Fokus.
+            </small>
+          </div>
+
+          <div>
+            <b>02</b>
+            <strong>Editorial Picks</strong>
+            <small>
+              Nur das WINTIQ-Team veröffentlicht Einschätzungen.
+            </small>
+          </div>
+
+          <div>
+            <b>03</b>
+            <strong>Mobile by default</strong>
+            <small>
+              Für kleine Screens und schnelle Wege gebaut.
+            </small>
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="phone">
+
+        <div class="notch"></div>
+
+        <div class="phone-screen">
+
+          <div class="phone-brand">
+            WINTIQ <em>BET</em>
+          </div>
+
+          <small>
+            ● LIVE 68'
+          </small>
+
+          <h4>FC Bayern</h4>
+
+          <div class="phone-score">
+            2 <span>:</span> 1
+          </div>
+
+          <h4>Dortmund</h4>
+
+          <div class="mini">
+            <span>1.78</span>
+            <span>3.90</span>
+            <span>4.40</span>
+          </div>
+
+          <div class="phone-pick">
+            WINTIQ PICK<br>
+            <b>Heimsieg</b>
+          </div>
+
+          <footer>
+            ⌂　 ◉　 ＋　 ▢
+          </footer>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- RELEASE -->
+
+    <section class="release">
+
+      <small>NEXT MOVE</small>
+
+      <h2 id="releaseDateBig">
+        11.09.2026
+      </h2>
+
+      <p>
+        WINTIQ — RELEASE CONCEPT
+      </p>
+
+      <strong id="days">
+        00 DAYS
+      </strong>
+
+      <a class="primary" href="#top">
+        Back to top ↑
+      </a>
+
+    </section>
+
+  </main>
+
+
+  <!-- FOOTER -->
+
+  <footer>
+
+    <div>
+
+      <div class="brand footer-brand">
+        <span>W</span>
+        <b>WINTIQ</b>
+        <em>BET</em>
+      </div>
+
+      <nav>
+        <a href="#">Impressum</a>
+        <a href="#">Datenschutz</a>
+        <a href="#">Responsible Gaming</a>
+        <a href="#">AGB</a>
+      </nav>
+
+    </div>
+
+    <p>
+      © 2026 WINTIQ · 18+ · PRIVATE DEMO · Keine Echtgeld-Wetten
+    </p>
+
+  </footer>
+
+</div>
+
+
+<!-- =========================================================
+     PASSWORD RESET MODAL
+     ========================================================= -->
+
+<div id="resetModal" class="modal hidden">
+
+  <div class="modal-card">
+
+    <button class="modal-close" id="resetClose">
+      ×
+    </button>
+
+    <div class="admin-head">
+
+      <small>
+        WINTIQ ACCOUNT
+      </small>
+
+      <h2>
+        Passwort <span>vergessen?</span>
+      </h2>
+
+      <p>
+        Gib deinen WINTIQ-Benutzernamen ein.
+        Die Anfrage wird an den Administrator übermittelt.
+      </p>
+
+    </div>
+
+    <div class="reset-box">
+
+      <label>
+        Benutzername
+        <input
+          id="resetUsername"
+          autocomplete="username"
+          placeholder="z. B. Ionix87"
+        >
+      </label>
+
+      <button
+        id="sendResetRequest"
+        class="primary"
+        type="button"
+      >
+        Anfrage senden →
+      </button>
+
+      <div
+        id="resetMessage"
+        class="reset-message"
+      ></div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- =========================================================
+     ADMIN PANEL
+     ========================================================= -->
+
+<div id="adminPanel" class="modal hidden">
+
+  <div class="modal-card">
+
+    <button class="modal-close" id="adminClose">
+      ×
+    </button>
+
+
+    <div class="admin-head">
+
+      <small>
+        WINTIQ CONTROL ROOM
+      </small>
+
+      <h2>
+        Admin <span>Studio.</span>
+      </h2>
+
+      <p>
+        Änderungen werden lokal in diesem Browser gespeichert.
+      </p>
+
+    </div>
+
+
+    <!-- ADMIN INPUTS -->
+
+    <div class="admin-grid">
+
+      <label>
+        Hero Titel
+        <input
+          id="aHeroTitle"
+          placeholder="SPORT. DATA. MOMENTUM."
+        >
+      </label>
+
+
+      <label>
+        Release Datum
+        <input
+          id="aRelease"
+          type="date"
+        >
+      </label>
+
+
+      <label class="full">
+        Hero Text
+        <textarea
+          id="aHeroText"
+          rows="3"
+        ></textarea>
+      </label>
+
+
+      <label class="full">
+        Pulse Text
+        <input id="aPulse">
+      </label>
+
+
+      <!-- PICKS -->
+
+      <div class="admin-block full">
+
+        <div class="admin-block-head">
+
+          <strong>
+            WINTIQ Picks
+          </strong>
+
+          <button
+            id="addPick"
+            type="button"
+          >
+            + Pick hinzufügen
+          </button>
+
+        </div>
+
+        <div id="adminPicks"></div>
+
+      </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         PASSWORD INBOX
+         ===================================================== -->
+
+    <div class="password-inbox">
+
+      <div class="password-inbox-head">
+
+        <div>
+          <strong>
+            Passwort-Anfragen
+          </strong>
+
+          <small>
+            <span id="pendingResetCount" class="inbox-count">0</span>
+            offene Anfrage(n)
+          </small>
+        </div>
+
+        <button
+          id="refreshPasswordRequests"
+          type="button"
+          class="ghost"
+        >
+          ↻ Aktualisieren
+        </button>
+
+      </div>
+
+
+      <div
+        id="passwordRequestList"
+        class="password-request-list"
+      >
+
+        <div class="password-inbox-empty">
+          Passwort-Anfragen werden geladen …
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         GITHUB PUBLISH
+         ===================================================== -->
+
+    <div class="admin-publish">
+
+      <small>
+
+        <b>GitHub-Veröffentlichung</b> ·
+        Speichert deine Picks direkt in
+        <code>picks.json</code>.
+
+        Dafür wird ein GitHub Fine-grained Token mit
+        <b>Contents: Read and write</b> benötigt.
+
+        Der Token wird nicht im Projekt gespeichert.
+
+      </small>
+
+
+      <div class="publish-fields">
+
+        <label class="github-token-field">
+
+          GitHub Token
+
+          <input
+            id="ghToken"
+            type="password"
+            autocomplete="off"
+            placeholder="github_pat_…"
+          >
+
+        </label>
+
+
+        <label>
+
+          Repository
+
+          <input
+            id="ghRepo"
+            value="bodycam1212-lab/axenvo-bet"
+            placeholder="owner/repository"
+          >
+
+        </label>
+
+
+        <label>
+
+          Branch
+
+          <input
+            id="ghBranch"
+            value="main"
+            placeholder="main"
+          >
+
+        </label>
+
+      </div>
+
+
+      <div class="github-test-row">
+
+        <button
+          id="testGitHub"
+          type="button"
+          class="ghost"
+        >
+          🧪 Token prüfen
+        </button>
+
+        <span
+          id="ghStatus"
+          class="github-status"
+        ></span>
+
+      </div>
+
+    </div>
+
+
+    <!-- ADMIN ACTIONS -->
+
+    <div class="admin-actions">
+
+      <button
+        id="saveAdmin"
+        class="primary"
+      >
+        Änderungen speichern
+      </button>
+
+
+      <button
+        id="publishGitHub"
+        class="primary"
+      >
+        Picks zu GitHub senden
+      </button>
+
+
+      <button
+        id="resetAdmin"
+        class="ghost"
+      >
+        Demo zurücksetzen
+      </button>
+
+    </div>
+
+
+    <small class="admin-warning">
+
+      Hinweis: Diese GitHub-Pages-Version ist eine Frontend-Demo.
+      Ein echter Login ist damit nicht sicher, weil HTML/JavaScript
+      öffentlich einsehbar ist. Für echte Zugangskontrolle braucht
+      es einen Server/Auth-Dienst.
+
+    </small>
+
+  </div>
+
+</div>
+
+
+<!-- TOAST -->
+
+<div id="toast"></div>
+
+
+<!-- JAVASCRIPT -->
+
+<script src="script.js?v=20260912-final"></script>
+
+</body>
+</html>
