@@ -1865,9 +1865,83 @@ function renderPickLiveTicker(pick,index){
   </div>`;
 }
 
+function renderPicksLiveTicker(){
+  const ticker = document.getElementById('picksLiveTicker');
+  if(!ticker) return;
+
+  const picks = Array.isArray(state.picks) ? state.picks : [];
+  if(!picks.length){
+    ticker.innerHTML = '<div class="picks-ticker-viewport"><div class="picks-ticker-track" style="animation:none"><div class="picks-ticker-set"><div class="picks-live-ticker-item upcoming"><span class="ticker-state">OFFEN</span><strong>Keine veröffentlichten Picks</strong><small>Neue Picks erscheinen hier automatisch.</small></div></div></div></div>';
+    return;
+  }
+
+  const makeItem = (pick,index) => {
+    const live = getPickLiveState(pick,index);
+    const score = getSimulatedPickScore(pick,index,live);
+    const teams = getPickTeamNames(pick);
+    let stateClass='upcoming', state='STARTET BALD', sub=`Start ${formatPickStart(live.start)}`;
+    if(live.status==='live'){
+      stateClass='live';
+      state=`LIVE · ${live.minute}'`;
+      sub=`${score[0]} : ${score[1]} · noch ${formatRemaining(live.end-Date.now())}`;
+    } else if(live.status==='finished'){
+      stateClass='finished';
+      state='BEENDET';
+      sub=`Endstand ${score[0]} : ${score[1]}`;
+    }
+    return `<div class="picks-live-ticker-item ${stateClass}" data-ticker-index="${index}">
+      <span class="ticker-state">${state}</span>
+      <strong class="ticker-match">${escapeHtml(teams.home)} <b>${score[0]}:${score[1]}</b> ${escapeHtml(teams.away)}</strong>
+      <small class="ticker-sub">${escapeHtml(sub)}</small>
+    </div>`;
+  };
+
+  const items = picks.map(makeItem).join('');
+  /* Duplicate the set so the marquee can loop continuously without a jump. */
+  ticker.innerHTML = `<div class="picks-ticker-viewport"><div class="picks-ticker-track"><div class="picks-ticker-set">${items}</div><div class="picks-ticker-set" aria-hidden="true">${items}</div></div></div>`;
+}
+
 function updateLivePickTickers(){
-  document.querySelectorAll('[data-pick-live]').forEach(el=>{const i=Number(el.dataset.pickLive),pick=state.picks[i];if(pick)el.innerHTML=renderPickLiveTicker(pick,i);});
-  renderPicksLiveTicker();
+  document.querySelectorAll('[data-pick-live]').forEach(el=>{
+    const i=Number(el.dataset.pickLive),pick=state.picks[i];
+    if(pick) el.innerHTML=renderPickLiveTicker(pick,i);
+  });
+
+  const ticker = document.getElementById('picksLiveTicker');
+  if(!ticker) return;
+  const picks = Array.isArray(state.picks) ? state.picks : [];
+  const items = ticker.querySelectorAll('.picks-ticker-set:first-child .picks-live-ticker-item');
+  const clones = ticker.querySelectorAll('.picks-ticker-set:nth-child(2) .picks-live-ticker-item');
+
+  if(items.length !== picks.length || clones.length !== picks.length){
+    renderPicksLiveTicker();
+    return;
+  }
+
+  const updateItem = (item,pick,index) => {
+    const live=getPickLiveState(pick,index);
+    const score=getSimulatedPickScore(pick,index,live);
+    const teams=getPickTeamNames(pick);
+    const stateEl=item.querySelector('.ticker-state');
+    const matchEl=item.querySelector('.ticker-match');
+    const subEl=item.querySelector('.ticker-sub');
+    let cls='upcoming',label='STARTET BALD',sub=`Start ${formatPickStart(live.start)}`;
+    if(live.status==='live'){
+      cls='live'; label=`LIVE · ${live.minute}'`; sub=`${score[0]} : ${score[1]} · noch ${formatRemaining(live.end-Date.now())}`;
+    } else if(live.status==='finished'){
+      cls='finished'; label='BEENDET'; sub=`Endstand ${score[0]} : ${score[1]}`;
+    }
+    item.classList.remove('live','upcoming','finished');
+    item.classList.add(cls);
+    if(stateEl) stateEl.textContent=label;
+    if(matchEl) matchEl.innerHTML=`${escapeHtml(teams.home)} <b>${score[0]}:${score[1]}</b> ${escapeHtml(teams.away)}`;
+    if(subEl) subEl.textContent=sub;
+  };
+
+  picks.forEach((pick,index)=>{
+    updateItem(items[index],pick,index);
+    updateItem(clones[index],pick,index);
+  });
 }
 
 function renderPicks(){
@@ -3221,15 +3295,8 @@ function initResetEvents() {
    ========================================================= */
 
 function removeLegacySportsUI(){
-  const selectors=['.sports','.live-section','.sports-filter','.market-section','.bet-slip','.betslip','#betSlip','#sports','#live'];
+  const selectors=['.ticker','.sports','.live-section','.sports-filter','.market-section','.bet-slip','.betslip','#betSlip','#sports','#live'];
   document.querySelectorAll(selectors.join(',')).forEach(el=>el.remove());
-  document.querySelectorAll('section,article,div').forEach(el=>{
-    const text=(el.textContent||'').replace(/\s+/g,' ').trim();
-    if(/Pick your arena\.?/i.test(text)||/Im Spiel\. Im Moment\./i.test(text)||/^Bet Slip$/i.test(text)){
-      const target=el.closest('section')||el;
-      if(!target.closest('#loginGate')) target.remove();
-    }
-  });
 }
 
 function init() {
