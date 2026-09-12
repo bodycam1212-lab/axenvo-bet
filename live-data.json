@@ -1,26 +1,6 @@
 {
-  "updatedAt": "2026-09-12T23:16:00+02:00",
-  "refreshSeconds": 5,
-  "matches": {
-    "pick-1": {
-      "status": "live",
-      "startedAt": "2026-09-12T22:35:00+02:00",
-      "score": {"home": 2, "away": 1},
-      "events": [
-        {"minute": 18, "type": "goal", "team": "home", "text": "Tor für das Heimteam"},
-        {"minute": 47, "type": "goal", "team": "away", "text": "Anschlusstreffer"},
-        {"minute": 67, "type": "goal", "team": "home", "text": "Heimteam geht wieder in Führung"}
-      ]
-    },
-    "pick-2": {
-      "status": "upcoming",
-      "score": {"home": 0, "away": 0},
-      "events": []
-    },
-    "pick-3": {
-      "status": "upcoming",
-      "score": {"home": 0, "away": 0},
-      "events": []
-    }
-  }
+  "updatedAt": null,
+  "source": "ESPN public scoreboard",
+  "refreshSeconds": 300,
+  "matches": {}
 }

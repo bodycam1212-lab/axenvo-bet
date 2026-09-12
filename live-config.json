@@ -1,0 +1,11 @@
+{
+  "provider": "espn",
+  "refreshMs": 15000,
+  "leagues": {
+    "FUSSBALL": ["ger.1", "ger.2", "esp.1", "esp.2", "eng.1", "ita.1", "fra.1"],
+    "BASKETBALL": ["nba"],
+    "TENNIS": []
+  },
+  "searchWindowDays": 7,
+  "allowLocalFallback": false
+}

@@ -3,23 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#080a0d">
-<meta name="description" content="WINTIQ — Sports Intelligence, Live Picks & Match Center">
-<title>WINTIQ — Sports Intelligence</title>
+<meta name="theme-color" content="#07090b">
+<meta name="description" content="WINTIQ — Live Sports Intelligence, Picks und Match Center">
+<title>WINTIQ — Live Sports Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260913-ultra">
+<link rel="stylesheet" href="styles.css?v=20260912-v3">
 </head>
 <body class="locked">
-
 <div id="loginGate" class="gate">
-  <div class="gate-orbit orbit-a"></div><div class="gate-orbit orbit-b"></div>
+  <div class="gate-glow"></div>
   <div class="gate-card">
-    <div class="brand brand-login"><span>W</span><b>WINTIQ</b></div>
+    <div class="brand"><span>W</span><b>WINTIQ</b></div>
     <div class="eyebrow"><i></i> PRIVATE SPORTS INTELLIGENCE</div>
     <h1>Read the<br><em>moment.</em></h1>
-    <p>Live-Kontext, redaktionelle Picks und Matchdaten auf einer Oberfläche.</p>
+    <p>Live-Kontext, redaktionelle Picks und echte Matchdaten auf einer Oberfläche.</p>
     <form id="loginForm">
       <label>Benutzername<input id="loginUser" autocomplete="username" placeholder="Benutzername" required></label>
       <label>Passwort<input id="loginPass" type="password" autocomplete="current-password" placeholder="Passwort" required></label>
@@ -32,56 +31,73 @@
 </div>
 
 <div id="app" class="app-hidden">
-  <div class="pulsebar"><div><i class="live-dot"></i><b>WINTIQ LIVE</b><span id="pulseText">Live intelligence</span></div><div><span id="lastUpdate">LIVE FEED · —</span><span id="currentUserLabel"></span><button id="adminOpen" class="mini-btn hidden">ADMIN</button><button id="logout" class="mini-btn">LOCK</button></div></div>
-
+  <div class="statusbar">
+    <div><i class="live-dot"></i><b>WINTIQ LIVE</b><span id="pulseText">Real-time match intelligence</span></div>
+    <div><span id="lastUpdate">FEED · —</span><span id="currentUserLabel"></span><button id="adminOpen" class="mini-btn hidden">ADMIN</button><button id="logout" class="mini-btn">LOCK</button></div>
+  </div>
   <header class="nav">
     <a class="brand" href="#top"><span>W</span><b>WINTIQ</b></a>
-    <nav><a href="#picks">Picks</a><a href="#events">Matchday</a><a href="#edge">Edge</a></nav>
+    <nav><a href="#picks">Picks</a><a href="#matchday">Matchday</a><a href="#performance">Performance</a><a href="#edge">Edge</a></nav>
     <div class="nav-actions"><a class="nav-cta" href="#picks">Live Center <i></i></a><button id="hamb" class="hamb">☰</button></div>
   </header>
-  <div id="mobile" class="mobile"><a href="#picks">Picks</a><a href="#events">Matchday</a><a href="#edge">Edge</a></div>
+  <div id="mobile" class="mobile"><a href="#picks">Picks</a><a href="#matchday">Matchday</a><a href="#performance">Performance</a><a href="#edge">Edge</a></div>
 
   <main id="top">
     <section class="hero">
-      <div class="hero-noise"></div><div class="hero-grid"></div>
       <div class="hero-copy">
         <div class="eyebrow"><i></i> WINTIQ ORIGINAL · LIVE ACCESS</div>
-        <div class="release-clock"><span>NÄCHSTER RELEASE</span><strong id="timer">00 : 00 : 00 : 00</strong></div>
+        <div class="hero-topline"><span>SPORTS INTELLIGENCE</span><span id="heroDate">—</span></div>
         <h1 id="heroTitle">SPORT.<br><em>DATA.</em><br>MOMENTUM.</h1>
-        <p id="heroText">Live-Kontext, klare Daten und redaktionelle Picks. Alles, was du im Moment wissen willst — ohne visuelles Chaos.</p>
-        <div class="hero-buttons"><a class="btn btn-primary" href="#picks">Live Picks <span>→</span></a><a class="btn btn-ghost" href="#events">Matchday <span>↗</span></a></div>
-        <div class="hero-stats"><div><strong id="heroLiveCount">0</strong><span>LIVE MATCHES</span></div><div><strong id="heroPickCount">0</strong><span>ACTIVE PICKS</span></div><div><strong id="heroFeedAge">—</strong><span>FEED STATUS</span></div></div>
+        <p id="heroText">Live-Kontext, klare Daten und redaktionelle Picks. Alles, was sich im Spielmoment verändert, bleibt sichtbar.</p>
+        <div class="hero-buttons"><a class="btn btn-primary" href="#picks">Live Picks <span>→</span></a><a class="btn btn-ghost" href="#matchday">Matchday <span>↗</span></a></div>
+        <div class="hero-stats"><div><strong id="heroLiveCount">0</strong><span>LIVE</span></div><div><strong id="heroPickCount">0</strong><span>PICKS</span></div><div><strong id="heroFeedAge">—</strong><span>FEED</span></div><div><strong id="heroCorrect">0%</strong><span>HIT RATE</span></div></div>
       </div>
-      <div class="hero-side"><div class="index-card"><span>WINTIQ INDEX</span><strong>94.7</strong><small>MARKET MOMENTUM <b>↑</b></small><div class="spark"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div class="hero-meta"><span>01 / 05</span><span>LIVE LAB</span><span id="releaseMeta">—</span></div></div>
+      <aside class="hero-panel">
+        <div class="panel-head"><span>LIVE MONITOR</span><i></i></div>
+        <div class="monitor-score"><small id="monitorLabel">NO LIVE MATCH</small><strong id="monitorScore">— : —</strong><span id="monitorTeams">Warte auf echte Daten</span></div>
+        <div class="monitor-grid"><div><span>STATUS</span><b id="monitorStatus">—</b></div><div><span>ZEIT</span><b id="monitorTime">—</b></div><div><span>DATUM</span><b id="monitorDate">—</b></div><div><span>SOURCE</span><b id="monitorSource">—</b></div></div>
+        <div class="monitor-foot"><span id="monitorEvent">Keine erfundenen Live-Daten</span><b>●</b></div>
+      </aside>
     </section>
 
-    <section class="picks section" id="picks">
-      <div class="section-heading"><div><span class="kicker">WINTIQ EDITORIAL</span><h2>Unsere <em>Picks.</em></h2></div><div class="heading-status"><i></i><span>LIVE SYNC</span><b id="feedSync">—</b></div></div>
-      <div id="picksLiveTicker" class="live-rail" aria-live="polite"></div>
-      <div class="tracking-line"><span><i></i> LIVE-TRACKING</span><b id="tickerUpdated">wird synchronisiert …</b><span>Auto-Update · 5 Sek.</span></div>
+    <section class="ticker-wrap" aria-live="polite">
+      <div class="ticker-head"><span><i></i> LIVE FEED</span><b id="tickerUpdated">Synchronisiere …</b><span>Auto Sync <strong>15s</strong></span></div>
+      <div id="picksLiveTicker" class="live-rail"></div>
+    </section>
+
+    <section class="section picks" id="picks">
+      <div class="section-heading"><div><span class="kicker">WINTIQ EDITORIAL</span><h2>Unsere <em>Picks.</em></h2><p class="section-sub">Jeder Pick bekommt seinen echten Matchstatus — live, kommende Partie oder beendet.</p></div><div class="heading-status"><i></i><span id="feedSync">SYNC</span><b id="feedSource">ESPN / FALLBACK</b></div></div>
       <div id="pickGrid" class="pick-grid"></div>
     </section>
 
-    <section class="events section" id="events">
-      <div class="section-heading"><div><span class="kicker">MATCHDAY INTELLIGENCE</span><h2>Was gerade <em>läuft.</em></h2></div><span class="heading-note">LIVE · UPCOMING · FINISHED</span></div>
+    <section class="section matchday" id="matchday">
+      <div class="section-heading"><div><span class="kicker">MATCHDAY INTELLIGENCE</span><h2>Der <em>Matchroom.</em></h2></div><span class="heading-note">LIVE · UPCOMING · FINISHED</span></div>
+      <div class="match-filter"><button class="filter active" data-filter="all">Alle</button><button class="filter" data-filter="live">🔴 Live</button><button class="filter" data-filter="upcoming">⏱ Bald</button><button class="filter" data-filter="finished">✓ Beendet</button><button class="filter" data-filter="unavailable">⚠ Keine Daten</button></div>
       <div id="matchBoard" class="match-board"></div>
     </section>
 
-    <section class="edge section" id="edge">
-      <div class="edge-panel"><div><span class="kicker">WINTIQ EDGE</span><h2>Less noise.<br><em>More signal.</em></h2><p>Die Oberfläche priorisiert genau die Informationen, die sich im Spielmoment ändern: Status, Score, Zeit, Events und Pick-Performance.</p></div><div class="edge-metrics"><div><strong>01</strong><span>LIVE FIRST</span><p>Der aktuelle Spielzustand steht immer oben.</p></div><div><strong>02</strong><span>EVENT STREAM</span><p>Tore und wichtige Ereignisse werden chronologisch sichtbar.</p></div><div><strong>03</strong><span>AUTO SYNC</span><p>Neue Daten erscheinen ohne Seitenreload.</p></div></div></div>
+    <section class="section performance" id="performance">
+      <div class="section-heading"><div><span class="kicker">PICK PERFORMANCE</span><h2>Was <em>funktioniert.</em></h2></div><span class="heading-note">AUTOMATIC · DATA-DRIVEN</span></div>
+      <div class="performance-grid">
+        <div class="perf-card big"><span class="kicker">HIT RATE</span><strong id="perfRate">0%</strong><div class="progress"><i id="perfBar"></i></div><p id="perfText">Noch keine beendeten Picks mit echten Daten.</p></div>
+        <div class="perf-card"><span class="kicker">RICHTIG</span><strong id="perfWon">0</strong><p>abgeschlossene Picks</p></div>
+        <div class="perf-card"><span class="kicker">FALSCH</span><strong id="perfLost">0</strong><p>abgeschlossene Picks</p></div>
+        <div class="perf-card"><span class="kicker">OFFEN</span><strong id="perfOpen">0</strong><p>live oder kommende Picks</p></div>
+      </div>
     </section>
 
-    <section class="release section"><div><span class="kicker">NEXT MOVE</span><h2 id="releaseDateBig">—</h2><p>WINTIQ · SPORTS INTELLIGENCE</p></div><strong id="days">00 DAYS</strong><a class="btn btn-primary" href="#top">Back to top ↑</a></section>
-  </main>
+    <section class="section edge" id="edge">
+      <div class="edge-panel"><div><span class="kicker">WINTIQ EDGE</span><h2>Less noise.<br><em>More signal.</em></h2><p>Die Oberfläche priorisiert genau die Informationen, die sich im Spielmoment ändern: Status, Score, Uhr, Events, Pick-Performance und Datenqualität.</p></div><div class="edge-metrics"><div><strong>01</strong><span>REAL DATA FIRST</span><p>Kein erfundener Live-Status aus einer alten Startzeit.</p></div><div><strong>02</strong><span>EVENT STREAM</span><p>Tore, Karten und wichtige Match-Ereignisse erscheinen chronologisch.</p></div><div><strong>03</strong><span>AUTO SYNC</span><p>Der Browser aktualisiert die Daten ohne Seitenreload.</p></div><div><strong>04</strong><span>STALE PROTECTION</span><p>Wenn der Feed alt ist, zeigen wir das offen statt falsche Live-Daten zu präsentieren.</p></div></div></div>
+    </section>
 
+    <section class="section release"><div><span class="kicker">NEXT MOVE</span><h2 id="releaseDateBig">—</h2><p>WINTIQ · SPORTS INTELLIGENCE</p></div><div class="release-right"><strong id="days">00 DAYS</strong><div class="release-clock"><span>NÄCHSTER RELEASE</span><b id="timer">00 : 00 : 00 : 00</b></div></div><a class="btn btn-primary" href="#top">Back to top ↑</a></section>
+  </main>
   <footer><div class="brand"><span>W</span><b>WINTIQ</b></div><div><a href="#">Impressum</a><a href="#">Datenschutz</a><a href="#">Responsible Gaming</a><a href="#">AGB</a></div><p>© 2026 WINTIQ · 18+ · PRIVATE DEMO · Keine Echtgeld-Wetten</p></footer>
 </div>
 
-<div id="resetModal" class="modal hidden"><div class="modal-card"><button class="modal-close" id="resetClose">×</button><span class="kicker">ACCOUNT</span><h2>Passwort <em>vergessen?</em></h2><p>Gib deinen WINTIQ-Benutzernamen ein. Die Anfrage wird an den Administrator übermittelt.</p><div class="reset-box"><label>Benutzername<input id="resetUsername" autocomplete="username" placeholder="z. B. Ionix87"></label><button id="sendResetRequest" class="btn btn-primary" type="button">Anfrage senden →</button><div id="resetMessage" class="reset-message"></div></div></div></div>
-
-<div id="adminPanel" class="modal hidden"><div class="modal-card admin-card"><button class="modal-close" id="adminClose">×</button><span class="kicker">CONTROL ROOM</span><h2>WINTIQ <em>Admin.</em></h2><div class="admin-grid"><label>Hero Titel<textarea id="aHeroTitle" rows="3"></textarea></label><label>Release Datum<input id="aRelease" type="date"></label><label>Hero Text<textarea id="aHeroText" rows="3"></textarea></label><label>Pulse Text<input id="aPulse"></label></div><div class="admin-section"><div class="admin-section-head"><div><span class="kicker">PICKS</span><h3>Live-Picks</h3></div><button id="addPick" class="btn btn-ghost" type="button">+ Pick</button></div><div id="adminPicks"></div></div><div class="admin-section"><div class="admin-section-head"><div><span class="kicker">PASSWORD INBOX</span><h3>Anfragen <b id="pendingResetCount">0</b></h3></div><button id="refreshPasswordRequests" class="btn btn-ghost" type="button">↻</button></div><div id="passwordRequestList" class="password-request-list"></div></div><div class="admin-section"><div class="admin-section-head"><div><span class="kicker">GITHUB</span><h3>Publish</h3></div></div><div class="admin-grid"><label>Token<input id="ghToken" type="password" autocomplete="off"></label><label>Repository<input id="ghRepo" placeholder="owner/repository"></label><label>Branch<input id="ghBranch" value="main"></label></div><div class="admin-actions"><button id="testGitHub" class="btn btn-ghost" type="button">Verbindung testen</button><button id="publishGitHub" class="btn btn-primary" type="button">Picks veröffentlichen</button><span id="ghStatus"></span></div></div><div class="admin-actions"><button id="saveAdmin" class="btn btn-primary" type="button">Änderungen speichern</button><button id="resetAdmin" class="btn btn-ghost" type="button">Demo zurücksetzen</button></div></div></div>
-
+<div id="resetModal" class="modal hidden"><div class="modal-card"><button class="modal-close" id="resetClose">×</button><span class="kicker">ACCOUNT</span><h2>Passwort <em>vergessen?</em></h2><p>Gib deinen WINTIQ-Benutzernamen ein. Die Anfrage wird an den Administrator übermittelt.</p><div class="reset-box"><label>Benutzername<input id="resetUsername" autocomplete="username" placeholder="Benutzername"></label><button id="sendResetRequest" class="btn btn-primary" type="button">Anfrage senden →</button><div id="resetMessage" class="reset-message"></div></div></div></div>
+<div id="adminPanel" class="modal hidden"><div class="modal-card admin-card"><button class="modal-close" id="adminClose">×</button><span class="kicker">CONTROL ROOM</span><h2>WINTIQ <em>Admin.</em></h2><div class="admin-grid"><label>Hero Titel<textarea id="aHeroTitle" rows="3"></textarea></label><label>Release Datum<input id="aRelease" type="date"></label><label>Hero Text<textarea id="aHeroText" rows="3"></textarea></label><label>Pulse Text<input id="aPulse"></label></div><div class="admin-section"><div class="admin-section-head"><div><span class="kicker">PICKS</span><h3>Live-Picks</h3></div><button id="addPick" class="btn btn-ghost" type="button">+ Pick</button></div><div id="adminPicks"></div></div><div class="admin-section"><div class="admin-section-head"><div><span class="kicker">PASSWORD INBOX</span><h3>Anfragen <b id="pendingResetCount">0</b></h3></div><button id="refreshPasswordRequests" class="btn btn-ghost" type="button">↻</button></div><div id="passwordRequestList" class="password-request-list"></div></div><div class="admin-actions"><button id="saveAdmin" class="btn btn-primary" type="button">Änderungen speichern</button><button id="resetAdmin" class="btn btn-ghost" type="button">Demo zurücksetzen</button></div></div></div>
 <div id="toast" class="toast"></div>
-<script src="script.js?v=20260913-ultra" defer></script>
+<script src="script.js?v=20260912-v3" defer></script>
 </body>
 </html>

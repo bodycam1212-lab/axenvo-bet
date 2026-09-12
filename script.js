@@ -1,35 +1,193 @@
 'use strict';
-const API_BASE='';
+
 const USERS={WINTIQ_MASTER:{password:'W!ntiqMaster#2026X',role:'admin'},Ionix87:{password:'Ajjw_291#12_O9s',role:'user'},Sxne1:{password:'K211093##duik_',role:'user'}};
-const DEFAULTS={heroTitle:'SPORT.\nDATA.\nMOMENTUM.',heroText:'Live-Kontext, klare Daten und redaktionelle Picks. Alles, was du im Moment wissen willst — ohne visuelles Chaos.',release:'2026-09-13',pulse:'Live intelligence',picks:[{id:'pick-1',sport:'FUSSBALL',match:'FC Bayern — Dortmund',tip:'Heimsieg',reason:'WINTIQ Edge: Heimvorteil, Druckphase und aktuelle Matchdynamik sprechen für das Heimteam.',tag:'TOP PICK',odd:'1.78',startAt:'2026-09-12T22:00:00+02:00',durationMinutes:105},{id:'pick-2',sport:'TENNIS',match:'Spieler A — Spieler B',tip:'Spieler A',reason:'WINTIQ Edge: stärkerer Start und bessere Punktquote in den entscheidenden Ballwechseln.',tag:'EDGE',odd:'1.85',startAt:'2026-09-13T18:00:00+02:00',durationMinutes:120},{id:'pick-3',sport:'BASKETBALL',match:'Lakers — Celtics',tip:'Lakers',reason:'WINTIQ Edge: Matchup und Home-Court-Faktor geben dem Pick einen kleinen Vorteil.',tag:'WATCH',odd:'1.92',startAt:'2026-09-13T20:30:00+02:00',durationMinutes:150}]};
-let state=loadState(),liveFeed={updatedAt:null,refreshSeconds:5,matches:{}};let currentUser=null;
-const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-function loadState(){try{const s=JSON.parse(localStorage.getItem('wintiqState')||'null');return {...structuredClone(DEFAULTS),...(s||{}),picks:Array.isArray(s?.picks)?s.picks:structuredClone(DEFAULTS.picks)}}catch{return structuredClone(DEFAULTS)}}
-function saveState(){localStorage.setItem('wintiqState',JSON.stringify(state))}
-function toast(msg){const e=$('#toast');if(!e)return;e.textContent=msg;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),3000)}
-function fmtDate(ts,withTime=true){if(!Number.isFinite(ts))return'—';return new Intl.DateTimeFormat('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric',...(withTime?{hour:'2-digit',minute:'2-digit'}:{})}).format(new Date(ts))}
-function fmtClock(ts){return Number.isFinite(ts)?new Intl.DateTimeFormat('de-DE',{hour:'2-digit',minute:'2-digit'}).format(new Date(ts)):'—'}
-function fmtDuration(ms){if(!Number.isFinite(ms)||ms<=0)return'00:00';let s=Math.ceil(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;return h?`${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`:`${m}:${String(sec).padStart(2,'0')}`}
-function teams(p){const x=String(p.match||'').split(/\s+[—–-]\s+/);return{home:x[0]||'Team A',away:x[1]||'Team B'}}
-function feedMatch(i,p){return liveFeed.matches?.[p.id||`pick-${i+1}`]||liveFeed.matches?.[`pick-${i+1}`]||null}
-function liveState(p,i){const f=feedMatch(i,p),start=new Date(p.startAt||'').getTime(),duration=Math.max(60,Number(p.durationMinutes)||105),end=start+duration*60000,now=Date.now();if(f?.status==='live'){const fs=new Date(f.startedAt||p.startAt||'').getTime();const minute=Number.isFinite(fs)?Math.min(duration,Math.max(1,Math.floor((now-fs)/60000)+1)):Number(f.minute)||1;return{status:'live',start,end,duration,minute,remaining:Math.max(0,end-now),feed:f}}if(f?.status==='upcoming')return{status:'upcoming',start,end,duration,minute:0,remaining:Math.max(0,start-now),feed:f};if(f?.status==='finished')return{status:'finished',start,end,duration,minute:duration,remaining:0,feed:f};if(now<start)return{status:'upcoming',start,end,duration,minute:0,remaining:start-now,feed:f};if(now<end)return{status:'live',start,end,duration,minute:Math.floor((now-start)/60000)+1,remaining:end-now,feed:f};return{status:'finished',start,end,duration,minute:duration,remaining:0,feed:f}}
-function score(p,i,l){const f=l.feed;if(f?.score&&Number.isFinite(+f.score.home)&&Number.isFinite(+f.score.away))return[+f.score.home,+f.score.away];return[0,0]}
-function verdict(p,i,l){if(l.status==='upcoming')return'pending';if(p.result==='won'||p.result==='lost')return p.result==='won'?'correct':'wrong';const[s1,s2]=score(p,i,l),t=String(p.tip||'').toLowerCase();if(t.includes('auswärt')||t.includes('away'))return s2>s1?'correct':'wrong';if(t.includes('draw')||t.includes('unentschieden'))return s1===s2?'correct':'wrong';return s1>s2?'correct':'wrong'}
-function dateLabel(l){if(l.status==='upcoming')return`Start ${fmtDate(l.start)}`;if(l.status==='live')return`Seit ${fmtClock(l.start)}`;return`War am ${fmtDate(l.start)}`}
-function events(feed){const ev=Array.isArray(feed?.events)?feed.events.slice(-4).reverse():[];if(!ev.length)return'';return`<div class="pick-events"><div class="kicker">LIVE EVENTS</div>${ev.map(e=>`<div class="pick-event"><b>${esc(e.minute??'—')}'</b><span>${e.type==='goal'?'⚽':e.type==='card'?'🟨':'•'}</span><span>${esc(e.text||e.type||'Event')}</span></div>`).join('')}</div>`}
-function liveCard(p,i){const l=liveState(p,i),s=score(p,i,l),v=verdict(p,i,l),t=teams(p);let status=l.status==='live'?`LIVE · ${l.minute}'`:l.status==='upcoming'?'STARTET BALD':'BEENDET';let result=l.status==='live'?(v==='correct'?'✓ AKTUELL RICHTIG':v==='wrong'?'✕ AKTUELL FALSCH':'◌ NOCH OFFEN'):(l.status==='finished'?(v==='correct'?'✓ PICK RICHTIG':'✕ PICK FALSCH'):'◌ NOCH OFFEN');return`<div class="pick-live-card"><div class="pick-live-head"><span class="status ${l.status}">${status}</span><span class="sport-mini">${esc(p.sport)}</span></div><div class="score-row"><span class="team">${esc(t.home)}</span><strong class="score">${s[0]} <small>:</small> ${s[1]}</strong><span class="team">${esc(t.away)}</span></div><div class="live-meta"><div>📅 DATUM<b>${esc(fmtDate(l.start,false))}</b></div><div>🕐 ZEIT<b>${esc(fmtClock(l.start))}</b></div><div>⏱ STATUS<b>${l.status==='live'?`${l.minute}' · ${fmtDuration(l.remaining)} übrig`:l.status==='upcoming'?`in ${fmtDuration(l.remaining)}`:'Endstand'}</b></div><div>📍 PHASE<b>${l.status==='live'?'LIVE':l.status==='upcoming'?'UPCOMING':'FINISHED'}</b></div></div><div class="verdict ${v}">${result}</div>${events(l.feed)}</div>`}
-function renderTicker(){const box=$('#picksLiveTicker');if(!box)return;const ps=state.picks||[];const make=(p,i)=>{const l=liveState(p,i),s=score(p,i,l),t=teams(p),label=l.status==='live'?`LIVE · ${l.minute}'`:l.status==='upcoming'?'STARTET BALD':'BEENDET',sub=l.status==='live'?`${s[0]} : ${s[1]} · ${fmtDuration(l.remaining)} übrig`:l.status==='upcoming'?`📅 ${fmtDate(l.start)}`:`Endstand ${s[0]} : ${s[1]}`;return`<div class="rail-item ${l.status}"><span class="rail-state">${label}</span><strong class="rail-match">${esc(t.home)} <b>${s[0]}:${s[1]}</b> ${esc(t.away)}</strong><small class="rail-sub">${esc(sub)}</small></div>`};const html=ps.map(make).join('');box.innerHTML=`<div class="rail-viewport"><div class="rail-track"><div class="rail-set">${html}</div><div class="rail-set" aria-hidden="true">${html}</div></div></div>`}
-function renderPicks(){const g=$('#pickGrid');if(!g)return;g.innerHTML=(state.picks||[]).map((p,i)=>`<article class="pick-card"><div class="pick-inner"><div class="pick-top"><span class="pick-tag">${esc(p.tag||'PICK')}</span><span class="pick-number">#${String(i+1).padStart(2,'0')}</span></div><div class="pick-sport">${esc(p.sport||'SPORT')}</div><div class="pick-match">${esc(p.match)}</div><div class="pick-tip"><span>🎯 WINTIQ TIPP</span><strong>${esc(p.tip)}</strong></div><div class="pick-reason">📝 ${esc(p.reason)}</div><div class="pick-bottom"><span>QUOTE</span><strong>${esc(p.odd||'—')}</strong></div>${liveCard(p,i)}</div></article>`).join('');renderTicker()}
-function renderMatchBoard(){const b=$('#matchBoard');if(!b)return;const ps=state.picks||[];b.innerHTML=ps.map((p,i)=>{const l=liveState(p,i),s=score(p,i,l),t=teams(p);return`<div class="match-row"><span class="match-status ${l.status}">${l.status==='live'?`● LIVE ${l.minute}'`:l.status==='upcoming'?'UPCOMING':'FINISHED'}</span><span class="match-teams">${esc(t.home)}</span><strong class="match-score">${s[0]}:${s[1]}</strong><span class="match-teams away">${esc(t.away)}</span><span class="match-time">${l.status==='live'?`${fmtDuration(l.remaining)} übrig`:fmtDate(l.start)}</span></div>`}).join('')}
-function updateLive(){renderPicks();renderMatchBoard();const now=liveFeed.updatedAt?new Date(liveFeed.updatedAt).getTime():0;$('#lastUpdate').textContent=now?`FEED · ${fmtClock(now)}`:'FEED · LOCAL';$('#feedSync').textContent=now?'SYNCED':'LOCAL';$('#tickerUpdated').textContent=`Zuletzt geprüft ${new Date().toLocaleTimeString('de-DE')}`;const live=(state.picks||[]).filter((p,i)=>liveState(p,i).status==='live').length;$('#heroLiveCount').textContent=live;$('#heroPickCount').textContent=(state.picks||[]).length;$('#heroFeedAge').textContent=liveFeed.updatedAt?'ONLINE':'LOCAL'}
-async function loadLiveFeed(){try{const r=await fetch(`live-data.json?v=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw Error(r.status);const d=await r.json();liveFeed={...liveFeed,...d,matches:{...(liveFeed.matches||{}),...(d.matches||{})}};updateLive()}catch(e){updateLive()}}
-function renderHero(){const title=$('#heroTitle');title.innerHTML=esc(state.heroTitle).replace(/\n/g,'<br>');$('#heroText').textContent=state.heroText;$('#pulseText').textContent=state.pulse;$('#releaseMeta').textContent=state.release;$('#releaseDateBig').textContent=state.release;}
-function countdown(){const target=new Date(`${state.release}T00:00:00`).getTime(),d=Math.max(0,target-Date.now()),s=Math.floor(d/1000),days=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),sec=s%60,p=x=>String(x).padStart(2,'0');$('#timer').textContent=`${p(days)} : ${p(h)} : ${p(m)} : ${p(sec)}`;$('#days').textContent=`${p(days)} DAYS`}
-function unlock(user,role){currentUser={user,role};sessionStorage.setItem('wintiqUser',JSON.stringify(currentUser));document.body.classList.remove('locked');$('#loginGate').classList.add('hidden');$('#app').classList.remove('app-hidden');$('#currentUserLabel').textContent=user+(role==='admin'?' · ADMIN':'');if(role==='admin')$('#adminOpen').classList.remove('hidden')}
+const DEFAULTS={
+  heroTitle:'SPORT.\nDATA.\nMOMENTUM.',
+  heroText:'Live-Kontext, klare Daten und redaktionelle Picks. Alles, was sich im Spielmoment verändert, bleibt sichtbar.',
+  release:'2026-09-13',
+  pulse:'Real-time match intelligence',
+  picks:[
+    {id:'pick-1',sport:'FUSSBALL',match:'SC Freiburg — Borussia Mönchengladbach',tip:'Heimsieg',reason:'WINTIQ Edge: Heimvorteil und redaktionelle Matchanalyse.',tag:'TOP PICK',odd:'1.72'},
+    {id:'pick-2',sport:'FUSSBALL',match:'St. Pauli — VfL Wolfsburg',tip:'Doppelte Chance – X2',reason:'WINTIQ Edge: Form, H2H und Auswärtssicherheit.',tag:'EDGE',odd:'1.50'},
+    {id:'pick-3',sport:'FUSSBALL',match:'Racing Santander — Deportivo Alavés',tip:'Doppelte Chance – X2',reason:'WINTIQ Edge: aktuelle Form und defensiver Matchup-Faktor.',tag:'LALIGA',odd:'1.53'}
+  ]
+};
+const API_LEAGUES={FUSSBALL:['ger.1','ger.2','esp.1','esp.2','eng.1','ita.1','fra.1'],BASKETBALL:['nba'],TENNIS:[]};
+const REFRESH_MS=15000;
+const STATE_VERSION=3;
+let state=loadState();
+let liveFeed={updatedAt:null,source:null,matches:{}};
+let apiEvents=[];
+let currentUser=null;
+let activeFilter='all';
+let apiBusy=false;
+const $=s=>document.querySelector(s);
+const $$=s=>Array.from(document.querySelectorAll(s));
+const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+
+function loadState(){
+  try{const saved=JSON.parse(localStorage.getItem('wintiqState')||'null');if(!saved||saved.version!==STATE_VERSION){const fresh={...structuredClone(DEFAULTS),version:STATE_VERSION};localStorage.setItem('wintiqState',JSON.stringify(fresh));return fresh}return {...structuredClone(DEFAULTS),...saved,picks:Array.isArray(saved.picks)?saved.picks:structuredClone(DEFAULTS.picks)}}catch{return {...structuredClone(DEFAULTS),version:STATE_VERSION}}
+}
+function saveState(){state.version=STATE_VERSION;localStorage.setItem('wintiqState',JSON.stringify(state))}
+function toast(msg){const e=$('#toast');if(!e)return;e.textContent=msg;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),2800)}
+function norm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'')}
+function aliases(s){const n=norm(s);const map={
+  scfreiburg:['freiburg','scfreiburg'],
+  borussiamonchengladbach:['borussiamonchengladbach','monchengladbach','gladbach'],
+  stpauli:['stpauli','fcstpauli'],
+  vflwolfsburg:['wolfsburg','vflwolfsburg'],
+  racingclub:['racingdesantander','racingclub','racing'],
+  racingdesantander:['racingdesantander','racingclub','racing'],
+  realracingclub:['racingdesantander','racingclub','racing'],
+  deportivoalaves:['deportivoalaves','alaves']
+};return [n,...(map[n]||[])];}
+function teamMatches(needle,value){const n=norm(needle),v=norm(value);if(!n||!v)return false;return v===n||v.includes(n)||n.includes(v)||aliases(needle).some(a=>v===a||v.includes(a)||a.includes(v))}
+function splitMatch(match){const x=String(match||'').split(/\s+[—–-]\s+/);return [x[0]?.trim()||'',x[1]?.trim()||'']}
+function teams(p){const [home,away]=splitMatch(p.match);return{home,away}}
+function fmtDate(ts,withTime=true){const n=typeof ts==='number'?ts:new Date(ts||'').getTime();if(!Number.isFinite(n))return'—';return new Intl.DateTimeFormat('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric',...(withTime?{hour:'2-digit',minute:'2-digit'}:{})}).format(new Date(n))}
+function fmtClock(ts){const n=typeof ts==='number'?ts:new Date(ts||'').getTime();return Number.isFinite(n)?new Intl.DateTimeFormat('de-DE',{hour:'2-digit',minute:'2-digit'}).format(new Date(n)):'—'}
+function fmtDuration(ms){if(!Number.isFinite(ms)||ms<0)return'—';let s=Math.floor(ms/1000),d=Math.floor(s/86400);s%=86400;let h=Math.floor(s/3600);s%=3600;let m=Math.floor(s/60),sec=s%60;if(d)return`${d}T ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;if(h)return`${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;return`${m}:${String(sec).padStart(2,'0')}`}
+function dateInput(d){const x=new Date(d);return Number.isFinite(x.getTime())?new Date(x.getTime()-x.getTimezoneOffset()*60000).toISOString().slice(0,16):''}
+function escapeNewlines(v){return esc(v).replace(/\n/g,'<br>')}
+
+function statusFromEvent(e){const t=e?.status?.type||{};if(t.completed||t.state==='post')return'finished';if(t.state==='in')return'live';return'upcoming'}
+function eventTeams(e){const c=e?.competitions?.[0]?.competitors||[];return{home:c.find(x=>x.homeAway==='home')?.team?.displayName||'',away:c.find(x=>x.homeAway==='away')?.team?.displayName||''}}
+function eventScore(e){const c=e?.competitions?.[0]?.competitors||[];return{home:Number(c.find(x=>x.homeAway==='home')?.score??0),away:Number(c.find(x=>x.homeAway==='away')?.score??0)}}
+function eventMinute(e){const s=e?.status?.displayClock||'';const m=String(s).match(/(\d+)(?::\d+)?/);if(m)return Number(m[1]);const d=e?.status?.type?.shortDetail||'';const x=String(d).match(/(\d+)['’]?/);return x?Number(x[1]):0}
+function eventDate(e){return new Date(e?.date||'').getTime()}
+function eventKey(e){return `${e?.id||''}`}
+
+function matchFromApi(p){
+  const t=teams(p);
+  let found=apiEvents.find(x=>teamMatches(t.home,x.teams.home)&&teamMatches(t.away,x.teams.away));
+  if(!found)found=apiEvents.find(x=>teamMatches(t.home,x.teams.away)&&teamMatches(t.away,x.teams.home));
+  return found||null;
+}
+function matchFromFeed(p){return liveFeed.matches?.[p.id]||null}
+function normalizeFeedMatch(p,f){
+  if(!f)return null;
+  const score=f.score||{};
+  const status=['live','upcoming','finished','unavailable'].includes(f.status)?f.status:'unavailable';
+  return{status,score:{home:Number(score.home||0),away:Number(score.away||0)},startAt:f.startAt||null,source:f.source||liveFeed.source||'feed',eventId:f.eventId||null,minute:f.minute||f.displayClock||'',displayClock:f.displayClock||'',events:Array.isArray(f.events)?f.events:[],lastChecked:f.lastChecked||liveFeed.updatedAt||null,stale:Boolean(f.stale),reason:f.reason||''};
+}
+function getLive(p){
+  const api=matchFromApi(p);
+  if(api){
+    const status=statusFromEvent(api.event), score=eventScore(api.event), start=eventDate(api.event);
+    return{status,score,startAt:start,source:'ESPN live',eventId:api.event.id,minute:eventMinute(api.event),displayClock:api.event.status?.type?.shortDetail||api.event.status?.type?.detail||'',events:api.events||[],stale:false,lastChecked:Date.now(),home:api.teams.home,away:api.teams.away,league:api.league};
+  }
+  const f=normalizeFeedMatch(p,matchFromFeed(p));
+  if(f)return f;
+  return{status:'unavailable',score:{home:0,away:0},startAt:null,source:'—',events:[],stale:true,reason:'Kein bestätigtes Spiel im Live-Feed gefunden.'};
+}
+function getVerdict(p,l){
+  if(l.status==='unavailable'||l.status==='upcoming')return'pending';
+  if(l.status!=='live'&&l.status!=='finished')return'pending';
+  const h=l.score.home,a=l.score.away,t=norm(p.tip);
+  if(t.includes('x2')||t.includes('auswart')||t.includes('away'))return a>=h?'correct':'wrong';
+  if(t.includes('1x'))return h>=a?'correct':'wrong';
+  if(t.includes('unentschieden')||t.includes('draw'))return h===a?'correct':'wrong';
+  if(t.includes('ueber')||t.includes('over'))return'pending';
+  if(t.includes('unter')||t.includes('under'))return'pending';
+  return h>a?'correct':'wrong';
+}
+function verdictLabel(v,l){if(v==='correct')return l.status==='live'?'✓ AKTUELL RICHTIG':'✓ PICK RICHTIG';if(v==='wrong')return l.status==='live'?'✕ AKTUELL FALSCH':'✕ PICK FALSCH';return l.status==='upcoming'?'◌ NOCH OFFEN':'⚠ KEIN ERGEBNIS'}
+function statusLabel(l){if(l.status==='live')return`LIVE · ${l.minute?esc(l.minute):'LIVE'}`;if(l.status==='upcoming')return'STARTET BALD';if(l.status==='finished')return'BEENDET';return'KEIN LIVE-FEED'}
+function timingText(l){if(l.status==='live')return l.minute?`${esc(l.minute)}' · LIVE`:'LIVE';if(l.status==='upcoming'&&l.startAt){const d=new Date(l.startAt).getTime()-Date.now();return`in ${fmtDuration(Math.max(0,d))}`};if(l.status==='finished')return`Endstand · ${fmtDate(l.startAt)}`;return'Keine bestätigte Zeit'}
+function dateLine(l){if(!l.startAt)return'—';return fmtDate(l.startAt,false)}
+function sourceBadge(l){return l.source||'—'}
+function eventLines(l){
+  const events=(l.events||[]).filter(x=>x.text||x.type).slice(-6).reverse();
+  if(!events.length)return'';
+  return`<div class="event-stream"><div class="event-title">MATCH EVENTS</div>${events.map(e=>`<div class="event-line"><span>${esc(e.clock||'')}</span><b>${esc(e.type||'EVENT')}</b><p>${esc(e.text||'')}</p></div>`).join('')}</div>`;
+}
+function liveCard(p,l){
+  const t=teams(p),v=getVerdict(p,l),score=l.score||{home:0,away:0};
+  const stateClass=l.status==='live'?'is-live':l.status==='upcoming'?'is-upcoming':l.status==='finished'?'is-finished':'is-unavailable';
+  const stale=l.stale||(!['live','upcoming','finished'].includes(l.status));
+  return`<div class="match-card ${stateClass}">
+    <div class="match-card-top"><span class="match-status">${l.status==='live'?'<i></i>':''}${statusLabel(l)}</span><span>${esc(sourceBadge(l))}</span></div>
+    <div class="scoreline"><div><strong>${esc(t.home)}</strong><small>HOME</small></div><div class="score-big">${Number(score.home)} <span>:</span> ${Number(score.away)}</div><div class="away"><strong>${esc(t.away)}</strong><small>AWAY</small></div></div>
+    <div class="match-data"><div><span>📅 DATUM</span><b>${esc(dateLine(l))}</b></div><div><span>🕐 ZEIT</span><b>${esc(l.startAt?fmtClock(l.startAt):'—')}</b></div><div><span>⏱ STATUS</span><b>${timingText(l)}</b></div><div><span>◉ DATEN</span><b>${stale?'FEED PRÜFEN':esc(l.displayClock||'OK')}</b></div></div>
+    <div class="verdict ${v}">${verdictLabel(v,l)}</div>
+    ${l.status==='unavailable'?`<div class="data-warning">${esc(l.reason||'Für dieses Spiel liegt aktuell keine bestätigte Live-Datenquelle vor.')}</div>`:''}
+    ${eventLines(l)}
+  </div>`;
+}
+function renderPick(p,i){const l=getLive(p),t=teams(p);return`<article class="pick-card ${l.status}"><div class="pick-glow"></div><div class="pick-inner">
+  <div class="pick-top"><span class="pick-tag">${esc(p.tag||'PICK')}</span><span class="pick-number">#${String(i+1).padStart(2,'0')}</span></div>
+  <div class="pick-sport">${esc(p.sport||'SPORT')}</div>
+  <h3>${esc(t.home)} <span>vs.</span> ${esc(t.away)}</h3>
+  <div class="tip-row"><span>🎯 WINTIQ TIPP</span><strong>${esc(p.tip)}</strong></div>
+  <p class="pick-reason">${escapeNewlines(p.reason||'')}</p>
+  <div class="pick-quote"><span>QUOTE</span><strong>${esc(p.odd||'—')}</strong></div>
+  ${liveCard(p,l)}
+</div></article>`}
+function renderPicks(){const g=$('#pickGrid');if(!g)return;g.innerHTML=(state.picks||[]).map(renderPick).join('');renderTicker()}
+function renderTicker(){
+  const box=$('#picksLiveTicker');if(!box)return;
+  const items=(state.picks||[]).map((p,i)=>{const l=getLive(p),t=teams(p),s=l.score||{home:0,away:0};return`<div class="rail-item ${l.status}"><span class="rail-state">${l.status==='live'?'<i></i> LIVE':l.status==='upcoming'?'⏱ BALD':l.status==='finished'?'✓ FINAL':'⚠ FEED'}</span><strong>${esc(t.home)} <b>${s.home}:${s.away}</b> ${esc(t.away)}</strong><small>${esc(timingText(l))} · ${esc(dateLine(l))}</small></div>`}).join('');
+  if(!items){box.innerHTML='';return}
+  box.innerHTML=`<div class="rail-track"><div class="rail-set">${items}</div><div class="rail-set" aria-hidden="true">${items}</div></div>`;
+}
+function renderMatchBoard(){
+  const b=$('#matchBoard');if(!b)return;
+  const rows=(state.picks||[]).map((p,i)=>({p,i,l:getLive(p)}).filter(x=>activeFilter==='all'||x.l.status===activeFilter));
+  if(!rows.length){b.innerHTML='<div class="empty-state">Keine Partien für diesen Filter.</div>';return}
+  b.innerHTML=rows.map(({p,l})=>{const t=teams(p),s=l.score||{home:0,away:0};return`<div class="match-row ${l.status}"><div class="row-status">${l.status==='live'?'<i></i>':''}${esc(statusLabel(l))}</div><div class="row-team home">${esc(t.home)}</div><strong class="row-score">${s.home}<span>:</span>${s.away}</strong><div class="row-team">${esc(t.away)}</div><div class="row-time"><b>${esc(l.startAt?fmtClock(l.startAt):'—')}</b><span>${esc(timingText(l))}</span></div></div>`}).join('');
+}
+function calcPerformance(){let won=0,lost=0,open=0;for(const p of state.picks||[]){const l=getLive(p),v=getVerdict(p,l);if(l.status==='finished'){if(v==='correct')won++;else if(v==='wrong')lost++;else open++}else open++}const total=won+lost,rate=total?Math.round(won/total*100):0;$('#perfWon').textContent=won;$('#perfLost').textContent=lost;$('#perfOpen').textContent=open;$('#perfRate').textContent=`${rate}%`;$('#perfBar').style.width=`${rate}%`;$('#perfText').textContent=total?`${won} von ${total} beendeten Picks richtig.`:'Noch keine beendeten Picks mit bestätigten Daten.';$('#heroCorrect').textContent=`${rate}%`}
+function updateMonitor(){
+  const live=(state.picks||[]).map((p,i)=>({p,l:getLive(p)})).find(x=>x.l.status==='live');
+  const x=live||null;
+  if(!x){$('#monitorLabel').textContent='NO LIVE MATCH';$('#monitorScore').textContent='— : —';$('#monitorTeams').textContent='Keine bestätigte laufende Partie';$('#monitorStatus').textContent='WARTET';$('#monitorTime').textContent='—';$('#monitorDate').textContent='—';$('#monitorSource').textContent=liveFeed.source||'—';$('#monitorEvent').textContent='Keine erfundenen Live-Daten';return}
+  const t=teams(x.p),s=x.l.score;$('#monitorLabel').textContent=`${x.p.sport} · ${x.l.minute||'LIVE'}`;$('#monitorScore').textContent=`${s.home} : ${s.away}`;$('#monitorTeams').textContent=`${t.home} — ${t.away}`;$('#monitorStatus').textContent='LIVE';$('#monitorTime').textContent=x.l.displayClock||`${x.l.minute||'—'}'`;$('#monitorDate').textContent=fmtDate(x.l.startAt,false);$('#monitorSource').textContent=x.l.source||'ESPN';$('#monitorEvent').textContent=x.l.events?.[x.l.events.length-1]?.text||'Live-Spiel läuft';}
+function updateMeta(){
+  const ts=liveFeed.updatedAt?new Date(liveFeed.updatedAt).getTime():0;const age=ts?Math.max(0,Date.now()-ts):Infinity;const stale=age>120000;$('#lastUpdate').textContent=ts?`FEED · ${fmtClock(ts)}`:'FEED · —';$('#feedSync').textContent=stale?'FEED STALE':'LIVE SYNC';$('#feedSource').textContent=stale?'PRÜFEN':(liveFeed.source||'ESPN');$('#tickerUpdated').textContent=ts?`Letzter Datenstand ${fmtClock(ts)}`:'Noch kein bestätigter Datenstand';const live=(state.picks||[]).filter(p=>getLive(p).status==='live').length;$('#heroLiveCount').textContent=live;$('#heroPickCount').textContent=state.picks.length;$('#heroFeedAge').textContent=stale?'STALE':'ONLINE';}
+function updateAll(){renderPicks();renderMatchBoard();calcPerformance();updateMonitor();updateMeta();}
+
+async function loadStoredFeed(){try{const r=await fetch(`live-data.json?v=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error(r.status);liveFeed=await r.json();updateAll()}catch{updateMeta()}}
+async function fetchScoreboard(sport,league,dates){const u=`https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard?dates=${dates}`;const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw new Error(`${r.status}`);return r.json()}
+async function loadApiLive(){
+  if(apiBusy)return;apiBusy=true;
+  try{
+    const now=new Date(),d=new Date(now),ds=`${d.getUTCFullYear()}${String(d.getUTCMonth()+1).padStart(2,'0')}${String(d.getUTCDate()).padStart(2,'0')}`;
+    const jobs=[]; for(const p of (state.picks||[])){for(const league of (API_LEAGUES[p.sport]||[])) jobs.push({sport:p.sport==='BASKETBALL'?'basketball':'soccer',league});} const unique=jobs.filter((x,i,a)=>a.findIndex(y=>y.sport===x.sport&&y.league===x.league)===i);
+    const results=await Promise.allSettled(unique.map(x=>fetchScoreboard(x.sport,x.league,ds)));
+    apiEvents=[];
+    results.forEach((r,i)=>{if(r.status==='fulfilled'){for(const event of (r.value.events||[])){apiEvents.push({league:unique[i].league,sport:unique[i].sport,event,teams:eventTeams(event),events:[]})}}});
+    if(apiEvents.length)liveFeed={...liveFeed,updatedAt:new Date().toISOString(),source:'ESPN live'};
+    updateAll();
+  }catch{}
+  finally{apiBusy=false}
+}
+async function loadMatchDetails(){
+  const live=(state.picks||[]).map(p=>({p,e:matchFromApi(p)})).filter(x=>x.e&&statusFromEvent(x.e.event)==='live');
+  await Promise.all(live.map(async x=>{try{const league=x.e.league,sport=x.e.sport||'soccer',r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/summary?event=${x.e.event.id}`,{cache:'no-store'});if(r.ok){const d=await r.json();x.e.events=(d.plays||[]).filter(v=>v.text||v.type?.text).slice(-12).map(v=>({clock:v.clock?.displayValue||'',type:v.type?.text||'EVENT',text:v.text||'',team:v.team?.displayName||''}));x.e.events=x.events||[];}}catch{}}));
+  updateAll();
+}
+function renderHero(){const title=$('#heroTitle');title.innerHTML=escapeNewlines(state.heroTitle);$('#heroText').textContent=state.heroText;$('#pulseText').textContent=state.pulse;$('#releaseDateBig').textContent=state.release;if($('#releaseMeta'))$('#releaseMeta').textContent=state.release;$('#heroDate').textContent=new Intl.DateTimeFormat('de-DE',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}).format(new Date())}
+function countdown(){const target=new Date(`${state.release}T00:00:00`).getTime(),d=Math.max(0,target-Date.now()),s=Math.floor(d/1000),days=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),sec=s%60,p=n=>String(n).padStart(2,'0');$('#timer').textContent=`${p(days)} : ${p(h)} : ${p(m)} : ${p(sec)}`;$('#days').textContent=`${p(days)} DAYS`}
+function unlock(user,role){currentUser={user,role};sessionStorage.setItem('wintiqUser',JSON.stringify(currentUser));document.body.classList.remove('locked');$('#loginGate').classList.add('hidden');$('#app').classList.remove('app-hidden');$('#currentUserLabel').textContent=user+(role==='admin'?' · ADMIN':'');if(role==='admin')$('#adminOpen').classList.remove('hidden');updateAll()}
 function lock(){sessionStorage.removeItem('wintiqUser');currentUser=null;document.body.classList.add('locked');$('#loginGate').classList.remove('hidden');$('#app').classList.add('app-hidden');closeModal('#adminPanel');closeModal('#resetModal')}
 function closeModal(id){$(id)?.classList.add('hidden')}
-function resetRequest(){const u=$('#resetUsername').value.trim(),m=$('#resetMessage');if(!u||!USERS[u]){m.textContent='Benutzername nicht gefunden.';m.style.color='#ff6d75';return}let r=JSON.parse(localStorage.getItem('wintiqPasswordRequests')||'[]');if(!r.some(x=>x.username===u&&x.status==='pending'))r.unshift({id:'PW-'+Date.now().toString(36),username:u,status:'pending',createdAt:new Date().toISOString()});localStorage.setItem('wintiqPasswordRequests',JSON.stringify(r));m.textContent='Anfrage gesendet ✓';m.style.color='var(--acid)';toast('Passwort-Anfrage gesendet');setTimeout(()=>closeModal('#resetModal'),900)}
-function renderAdmin(){if(!currentUser||currentUser.role!=='admin')return;$('#aHeroTitle').value=state.heroTitle;$('#aHeroText').value=state.heroText;$('#aRelease').value=state.release;$('#aPulse').value=state.pulse;$('#adminPicks').innerHTML=state.picks.map((p,i)=>`<div class="password-request"><div class="password-request-top"><b>Pick ${i+1}</b><button class="mini-btn" data-remove-pick="${i}">ENTFERNEN</button></div><div class="admin-grid"><label>Sport<input data-p="${i}" data-f="sport" value="${esc(p.sport)}"></label><label>Tag<input data-p="${i}" data-f="tag" value="${esc(p.tag||'PICK')}"></label><label>Match<input data-p="${i}" data-f="match" value="${esc(p.match)}"></label><label>Tipp<input data-p="${i}" data-f="tip" value="${esc(p.tip)}"></label><label>Startzeit<input type="datetime-local" data-p="${i}" data-f="startAt" value="${esc((p.startAt||'').slice(0,16))}"></label><label>Dauer<input type="number" data-p="${i}" data-f="durationMinutes" value="${esc(p.durationMinutes||105)}"></label><label>Quote<input data-p="${i}" data-f="odd" value="${esc(p.odd||'')}"></label><label>Einschätzung<textarea data-p="${i}" data-f="reason" rows="2">${esc(p.reason||'')}</textarea></label></div></div>`).join('');document.querySelectorAll('[data-p]').forEach(e=>e.oninput=()=>{const i=+e.dataset.p;state.picks[i][e.dataset.f]=e.dataset.f==='durationMinutes'?+e.value:e.value});renderRequests()}
-function renderRequests(){const list=$('#passwordRequestList'),r=JSON.parse(localStorage.getItem('wintiqPasswordRequests')||'[]');$('#pendingResetCount').textContent=r.filter(x=>x.status==='pending').length;if(!r.length){list.innerHTML='<div class="password-request">Keine Anfragen.</div>';return}list.innerHTML=r.map(x=>`<div class="password-request"><div class="password-request-top"><b>${esc(x.username)}</b><span class="password-request-status">${esc(x.status)}</span></div><div class="password-request-meta">${esc(new Date(x.createdAt).toLocaleString('de-DE'))}</div></div>`).join('')}
-function init(){renderHero();renderPicks();renderMatchBoard();countdown();$('#loginForm').onsubmit=e=>{e.preventDefault();const u=$('#loginUser').value.trim(),p=$('#loginPass').value;if(USERS[u]?.password===p)unlock(u,USERS[u].role);else $('#loginError').textContent='Benutzername oder Passwort ist falsch.'};$('#forgotPasswordBtn').onclick=()=>$('#resetModal').classList.remove('hidden');$('#resetClose').onclick=()=>closeModal('#resetModal');$('#sendResetRequest').onclick=resetRequest;$('#logout').onclick=lock;$('#hamb').onclick=()=>$('#mobile').classList.toggle('open');document.querySelectorAll('#mobile a').forEach(a=>a.onclick=()=>$('#mobile').classList.remove('open'));$('#adminOpen').onclick=()=>{$('#adminPanel').classList.remove('hidden');renderAdmin()};$('#adminClose').onclick=()=>closeModal('#adminPanel');$('#addPick').onclick=()=>{state.picks.push({id:'pick-'+Date.now(),sport:'FUSSBALL',match:'Neue Partie — Gegner',tip:'Heimsieg',reason:'Neue WINTIQ Einschätzung.',tag:'NEW',odd:'1.90',startAt:new Date(Date.now()+3600000).toISOString(),durationMinutes:105});renderAdmin()};$('#saveAdmin').onclick=()=>{state.heroTitle=$('#aHeroTitle').value;state.heroText=$('#aHeroText').value;state.release=$('#aRelease').value;state.pulse=$('#aPulse').value;saveState();renderHero();updateLive();closeModal('#adminPanel');toast('Änderungen gespeichert ✓')};$('#resetAdmin').onclick=()=>{state=structuredClone(DEFAULTS);saveState();renderAdmin();renderHero();updateLive()};$('#refreshPasswordRequests').onclick=renderRequests;$('#adminPicks').onclick=e=>{const b=e.target.closest('[data-remove-pick]');if(b){state.picks.splice(+b.dataset.removePick,1);renderAdmin()}};['#testGitHub','#publishGitHub'].forEach(id=>$(id).onclick=()=>toast('GitHub-Funktion ist in dieser Demo vorbereitet.'));try{const s=JSON.parse(sessionStorage.getItem('wintiqUser')||'null');if(s?.user&&USERS[s.user])unlock(s.user,USERS[s.user].role)}catch{};loadLiveFeed();setInterval(()=>{countdown();updateLive()},1000);setInterval(loadLiveFeed,5000)}
+function resetRequest(){const u=$('#resetUsername').value.trim(),m=$('#resetMessage');if(!u||!USERS[u]){m.textContent='Benutzername nicht gefunden.';m.style.color='#ff6b75';return}const r=JSON.parse(localStorage.getItem('wintiqPasswordRequests')||'[]');if(!r.some(x=>x.username===u&&x.status==='pending'))r.unshift({id:'PW-'+Date.now().toString(36),username:u,status:'pending',createdAt:new Date().toISOString()});localStorage.setItem('wintiqPasswordRequests',JSON.stringify(r));m.textContent='Anfrage gesendet ✓';m.style.color='var(--acid)';toast('Passwort-Anfrage gesendet');setTimeout(()=>closeModal('#resetModal'),800)}
+function renderRequests(){const list=$('#passwordRequestList');if(!list)return;const r=JSON.parse(localStorage.getItem('wintiqPasswordRequests')||'[]');$('#pendingResetCount').textContent=r.filter(x=>x.status==='pending').length;list.innerHTML=r.length?r.map(x=>`<div class="password-request"><div class="password-request-top"><b>${esc(x.username)}</b><span>${esc(x.status)}</span></div><small>${esc(new Date(x.createdAt).toLocaleString('de-DE'))}</small></div>`).join(''):'<div class="password-request">Keine Anfragen.</div>'}
+function renderAdmin(){if(!currentUser||currentUser.role!=='admin')return;$('#aHeroTitle').value=state.heroTitle;$('#aHeroText').value=state.heroText;$('#aRelease').value=state.release;$('#aPulse').value=state.pulse;$('#adminPicks').innerHTML=state.picks.map((p,i)=>`<div class="admin-pick"><div class="password-request-top"><b>Pick ${i+1}</b><button class="mini-btn" data-remove-pick="${i}">ENTFERNEN</button></div><div class="admin-grid"><label>Sport<input data-p="${i}" data-f="sport" value="${esc(p.sport)}"></label><label>Tag<input data-p="${i}" data-f="tag" value="${esc(p.tag||'PICK')}"></label><label>Match<input data-p="${i}" data-f="match" value="${esc(p.match)}"></label><label>Tipp<input data-p="${i}" data-f="tip" value="${esc(p.tip)}"></label><label>Quote<input data-p="${i}" data-f="odd" value="${esc(p.odd||'')}"></label><label>Einschätzung<textarea data-p="${i}" data-f="reason" rows="2">${esc(p.reason||'')}</textarea></label></div></div>`).join('');$$('[data-p]').forEach(e=>e.oninput=()=>{const i=+e.dataset.p;state.picks[i][e.dataset.f]=e.value});renderRequests()}
+function bindFilters(){$$('.filter').forEach(b=>b.onclick=()=>{$$('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');activeFilter=b.dataset.filter;renderMatchBoard()})}
+function init(){
+  renderHero();updateAll();countdown();bindFilters();
+  $('#loginForm').onsubmit=e=>{e.preventDefault();const u=$('#loginUser').value.trim(),p=$('#loginPass').value;if(USERS[u]?.password===p)unlock(u,USERS[u].role);else $('#loginError').textContent='Benutzername oder Passwort ist falsch.'};
+  $('#forgotPasswordBtn').onclick=()=>$('#resetModal').classList.remove('hidden');$('#resetClose').onclick=()=>closeModal('#resetModal');$('#sendResetRequest').onclick=resetRequest;$('#logout').onclick=lock;
+  $('#hamb').onclick=()=>$('#mobile').classList.toggle('open');$$('#mobile a').forEach(a=>a.onclick=()=>$('#mobile').classList.remove('open'));
+  $('#adminOpen').onclick=()=>{$('#adminPanel').classList.remove('hidden');renderAdmin()};$('#adminClose').onclick=()=>closeModal('#adminPanel');$('#refreshPasswordRequests').onclick=renderRequests;
+  $('#addPick').onclick=()=>{state.picks.push({id:'pick-'+Date.now(),sport:'FUSSBALL',match:'Neue Partie — Gegner',tip:'Heimsieg',reason:'Neue WINTIQ Einschätzung.',tag:'NEW',odd:'1.90'});renderAdmin();updateAll()};
+  $('#adminPicks').onclick=e=>{const b=e.target.closest('[data-remove-pick]');if(b){state.picks.splice(+b.dataset.removePick,1);renderAdmin();updateAll()}};
+  $('#saveAdmin').onclick=()=>{state.heroTitle=$('#aHeroTitle').value;state.heroText=$('#aHeroText').value;state.release=$('#aRelease').value;state.pulse=$('#aPulse').value;saveState();renderHero();updateAll();closeModal('#adminPanel');toast('Änderungen gespeichert ✓')};
+  $('#resetAdmin').onclick=()=>{state=structuredClone(DEFAULTS);saveState();renderHero();updateAll();toast('Demo zurückgesetzt')};
+  try{const s=JSON.parse(sessionStorage.getItem('wintiqUser')||'null');if(s?.user&&USERS[s.user])unlock(s.user,USERS[s.user].role)}catch{}
+  loadStoredFeed().then(loadApiLive).then(loadMatchDetails);
+  setInterval(()=>{countdown();updateAll()},1000);
+  setInterval(async()=>{await loadStoredFeed();await loadApiLive();await loadMatchDetails()},REFRESH_MS);
+}
 document.addEventListener('DOMContentLoaded',init);
