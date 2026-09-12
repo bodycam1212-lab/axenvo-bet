@@ -2996,6 +2996,16 @@ function renderAdminPicks() {
 
               </label>
 
+              <label>
+                Startzeit
+                <input type="datetime-local" data-field="startAt" data-index="${index}" value="${pick.startAt ? new Date(pick.startAt).toISOString().slice(0,16) : ''}">
+              </label>
+
+              <label>
+                Dauer (Min.)
+                <input type="number" min="1" data-field="durationMinutes" data-index="${index}" value="${escapeHtml(pick.durationMinutes ?? 105)}">
+              </label>
+
 
               <label>
                 Startzeit
