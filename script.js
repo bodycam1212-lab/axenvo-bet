@@ -372,6 +372,12 @@ function initLogin() {
       const account =
         USERS[parsed?.user];
 
+      /*
+        Session nur wiederherstellen,
+        wenn Benutzer UND Rolle mit
+        dem festgelegten Account übereinstimmen.
+      */
+
       if (
         account &&
         parsed.user &&
@@ -531,6 +537,9 @@ async function requestPasswordReset() {
   const input =
     $('#resetUsername');
 
+  const message =
+    $('#resetMessage');
+
   const button =
     $('#sendResetRequest');
 
@@ -549,6 +558,13 @@ async function requestPasswordReset() {
 
   }
 
+
+  /*
+    Wir akzeptieren nur bekannte Accounts.
+
+    Dadurch können nicht beliebige Fantasie-Accounts
+    in das Admin-Postfach geschrieben werden.
+  */
 
   if (!USERS[username]) {
 
@@ -733,6 +749,11 @@ function saveLocalPasswordRequest(
 
   const requests =
     getLocalPasswordRequests();
+
+  /*
+    Doppelte offene Anfrage desselben
+    Benutzers verhindern.
+  */
 
   const alreadyPending =
     requests.some(item =>
@@ -1108,7 +1129,6 @@ function renderPasswordRequest(
       ${
         isPending
           ? `
-
             <div class="password-request-actions">
 
               <button
@@ -1163,10 +1183,8 @@ function renderPasswordRequest(
               </button>
 
             </div>
-
           `
           : `
-
             <div class="password-request-actions">
 
               <button
@@ -1178,7 +1196,6 @@ function renderPasswordRequest(
               </button>
 
             </div>
-
           `
       }
 
@@ -1320,6 +1337,15 @@ async function saveNewPassword(
       );
 
     } else {
+
+      /*
+        DEMO:
+
+        Passwort lokal aktualisieren.
+
+        Hinweis:
+        Diese Änderung gilt nur in diesem Browser.
+      */
 
       const username =
         request.username;
@@ -1760,7 +1786,6 @@ function updateCountdown() {
    ========================================================= */
 
 const MATCHES = [
-
   {
     sport: 'football',
     league: 'BUNDESLIGA',
@@ -1770,7 +1795,6 @@ const MATCHES = [
     score: ['2', '1'],
     odds: ['1.78', '3.90', '4.40']
   },
-
   {
     sport: 'football',
     league: 'CHAMPIONS LEAGUE',
@@ -1780,7 +1804,6 @@ const MATCHES = [
     score: ['0', '0'],
     odds: ['2.05', '3.50', '3.20']
   },
-
   {
     sport: 'tennis',
     league: 'ATP',
@@ -1790,7 +1813,6 @@ const MATCHES = [
     score: ['1', '0'],
     odds: ['1.65', '2.20']
   },
-
   {
     sport: 'basketball',
     league: 'NBA',
@@ -1798,621 +1820,985 @@ const MATCHES = [
     home: 'Lakers',
     away: 'Celtics',
     score: ['0', '0'],
-    odds: ['1.72', '2.10']
-  },
-
-  {
-    sport: 'ice',
-    league: 'DEL',
-    time: '20:00',
-    home: 'Berlin',
-    away: 'München',
-    score: ['0', '0'],
-    odds: ['2.15', '3.60', '2.55']
+    odds: ['1.92', '1.88']
   }
-
 ];
 
-
-function renderMatches(
-  sport = 'all'
-) {
-
-  const container =
-    $('#matches');
-
+function renderMatches(filter = 'all') {
+  const container = $('#matches');
   if (!container) return;
 
+  const matches = filter === 'all'
+    ? MATCHES
+    : MATCHES.filter(match => match.sport === filter);
 
-  const filtered =
-    sport === 'all'
-      ? MATCHES
-      : MATCHES.filter(
-          match =>
-            match.sport === sport
-        );
+  container.innerHTML = matches.map(match => {
+    const oddsHtml = match.odds.map(odd => `
+      <button class="odd" type="button" data-odd="${escapeHtml(odd)}">
+        ${escapeHtml(odd)}
+      </button>
+    `).join('');
 
+    return `
+      <article class="match-card">
+        <div class="match-top">
+          <small>${escapeHtml(match.league)}</small>
+          <span>${escapeHtml(match.time)}</span>
+        </div>
+        <div class="match-teams">
+          <div>
+            <strong>${escapeHtml(match.home)}</strong>
+            <strong>${escapeHtml(match.away)}</strong>
+          </div>
+          <div class="score">
+            <b>${escapeHtml(match.score[0])}</b>
+            <span>:</span>
+            <b>${escapeHtml(match.score[1])}</b>
+          </div>
+        </div>
+        <div class="odds">${oddsHtml}</div>
+      </article>
+    `;
+  }).join('');
 
-  container.innerHTML =
-    filtered
-      .map(
-        match =>
-          renderMatch(
-            match
-          )
-      )
-      .join('');
-
+  container.querySelectorAll('.odd').forEach(button => {
+    button.addEventListener('click', () => {
+      showToast(`Quote ${button.dataset.odd} ausgewählt`);
+    });
+  });
 }
 
+/* =========================================================
+   LIVE PICK TICKER
+   ========================================================= */
 
-function renderMatch(
-  match
-) {
+function getPickLiveState(pick, index) {
+  const fallbackStarts = [
+    '2026-09-12T14:15:00+02:00',
+    '2026-09-12T15:30:00+02:00',
+    '2026-09-12T18:00:00+02:00'
+  ];
 
-  const isLive =
-    String(match.time)
-      .toUpperCase()
-      .includes('LIVE');
+  const rawStart = pick.startAt || fallbackStarts[index % fallbackStarts.length];
+  const start = new Date(rawStart).getTime();
+  const duration = Math.max(60, Number(pick.durationMinutes) || 105);
+  const end = start + duration * 60 * 1000;
+  const now = Date.now();
 
+  if (!Number.isFinite(start)) {
+    return { status: 'unknown', start: NaN, end: NaN, duration, elapsed: 0, minute: 0 };
+  }
+
+  if (now < start) {
+    return { status: 'upcoming', start, end, duration, elapsed: 0, minute: 0 };
+  }
+
+  if (now >= end) {
+    return { status: 'finished', start, end, duration, elapsed: duration, minute: duration };
+  }
+
+  const elapsed = Math.floor((now - start) / 60000);
+  return {
+    status: 'live',
+    start,
+    end,
+    duration,
+    elapsed,
+    minute: Math.max(1, elapsed + 1)
+  };
+}
+
+function getSimulatedPickScore(pick, index, liveState) {
+  const seed = `${pick.match || ''}|${pick.tip || ''}|${index}`;
+  let hash = 0;
+
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
+  }
+
+  hash = Math.abs(hash);
+
+  if (liveState.status === 'upcoming' || liveState.status === 'unknown') {
+    return [0, 0];
+  }
+
+  const progress = liveState.status === 'finished'
+    ? 1
+    : Math.min(1, liveState.elapsed / Math.max(1, liveState.duration));
+
+  const home = Math.min(5, Math.floor(progress * (hash % 4 + 1)));
+  const away = Math.min(5, Math.floor(progress * ((hash >> 3) % 3 + 1)));
+
+  return [home, away];
+}
+
+function getPickVerdict(pick, index) {
+  const live = getPickLiveState(pick, index);
+
+  if (live.status === 'upcoming' || live.status === 'unknown') {
+    return 'pending';
+  }
+
+  const [home, away] = getSimulatedPickScore(pick, index, live);
+  const tip = String(pick.tip || '').toLowerCase();
+
+  if (tip.includes('unentschieden') || tip.includes('draw')) {
+    return home === away ? 'correct' : 'wrong';
+  }
+
+  if (tip.includes('auswärt') || tip.includes('away')) {
+    return away > home ? 'correct' : 'wrong';
+  }
+
+  if (tip.includes('over') || tip.includes('mehr')) {
+    return home + away >= 3 ? 'correct' : 'wrong';
+  }
+
+  if (tip.includes('under') || tip.includes('weniger')) {
+    return home + away < 3 ? 'correct' : 'wrong';
+  }
+
+  return home > away ? 'correct' : 'wrong';
+}
+
+function formatPickStart(start) {
+  if (!Number.isFinite(start)) return 'Startzeit nicht festgelegt';
+
+  return new Date(start).toLocaleString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function formatRemaining(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) return '0:00';
+
+  const totalSeconds = Math.ceil(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+function getPickTeamNames(pick) {
+  const parts = String(pick.match || '').split(/\s+[—–-]\s+/);
+  return {
+    home: parts[0]?.trim() || 'Team A',
+    away: parts[1]?.trim() || 'Team B'
+  };
+}
+
+function renderPickLiveTicker(pick, index) {
+  const live = getPickLiveState(pick, index);
+  const score = getSimulatedPickScore(pick, index, live);
+  const verdict = getPickVerdict(pick, index);
+  const teams = getPickTeamNames(pick);
+
+  let statusLabel = 'STARTET BALD';
+  let statusClass = 'pending';
+  let meta = `Start ${formatPickStart(live.start)}`;
+  let result = '<div class="pick-live-result pending">— Noch offen</div>';
+  let timeText = 'Startzeit nicht festgelegt';
+
+  if (live.status === 'live') {
+    statusLabel = `LIVE · ${live.minute}'`;
+    statusClass = 'live';
+    meta = `Noch ${formatRemaining(live.end - Date.now())}`;
+    timeText = `Läuft seit ${live.minute}'`;
+
+    if (verdict === 'correct') {
+      result = '<div class="pick-live-result correct">✓ AKTUELL RICHTIG</div>';
+    } else if (verdict === 'wrong') {
+      result = '<div class="pick-live-result wrong">✕ AKTUELL FALSCH</div>';
+    } else {
+      result = '<div class="pick-live-result pending">— AKTUELL OFFEN</div>';
+    }
+  } else if (live.status === 'finished') {
+    statusLabel = 'BEENDET';
+    statusClass = 'done';
+    meta = 'Spiel beendet';
+    timeText = `Endstand nach ${live.duration} Min.`;
+    result = verdict === 'correct'
+      ? '<div class="pick-live-result correct">✓ PICK RICHTIG</div>'
+      : '<div class="pick-live-result wrong">✕ PICK FALSCH</div>';
+  }
 
   return `
-
-    <article class="match-card">
-
-      <div class="match-top">
-
-        <small>
-          ${escapeHtml(match.league)}
-        </small>
-
-        <span class="${isLive ? 'live' : ''}">
-          ${escapeHtml(match.time)}
-        </span>
-
+    <div class="pick-live pick-live-${statusClass}">
+      <div class="pick-live-head">
+        <span class="pick-live-dot ${statusClass}">● ${statusLabel}</span>
+        <span>${escapeHtml(pick.sport || 'SPORT')}</span>
       </div>
 
-
-      <div class="teams">
-
-        <div>
-
-          <strong>
-            ${escapeHtml(match.home)}
-          </strong>
-
-          <span>
-            ${escapeHtml(match.away)}
-          </span>
-
-        </div>
-
-
-        <div class="score">
-
-          <b>
-            ${escapeHtml(match.score[0])}
-          </b>
-
-          <span>:</span>
-
-          <b>
-            ${escapeHtml(match.score[1])}
-          </b>
-
-        </div>
-
+      <div class="pick-live-score">
+        <span>${escapeHtml(teams.home)}</span>
+        <strong>${score[0]} : ${score[1]}</strong>
+        <span>${escapeHtml(teams.away)}</span>
       </div>
 
-
-      <div class="odds">
-
-        ${match.odds.map(
-          odd => `
-            <button
-              type="button"
-              class="odd"
-              disabled
-            >
-              ${escapeHtml(odd)}
-            </button>
-          `
-        ).join('')}
-
+      <div class="pick-live-meta">
+        <span>${escapeHtml(meta)}</span>
+        <span>${escapeHtml(timeText)}</span>
       </div>
 
-    </article>
+      ${result}
 
+      <div class="pick-start">
+        Tipp: <b>${escapeHtml(pick.tip || '—')}</b>
+      </div>
+    </div>
   `;
-
 }
 
+function renderPicksLiveTicker() {
+  const container = $('#picksLiveTicker');
+  if (!container) return;
+
+  if (!state.picks.length) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const items = state.picks.map((pick, index) => {
+    const live = getPickLiveState(pick, index);
+    const score = getSimulatedPickScore(pick, index, live);
+    const teams = getPickTeamNames(pick);
+
+    let stateLabel = `START ${formatPickStart(live.start)}`;
+    let stateClass = 'upcoming';
+
+    if (live.status === 'live') {
+      stateLabel = `LIVE ${live.minute}'`;
+      stateClass = 'live';
+    } else if (live.status === 'finished') {
+      stateLabel = 'FINAL';
+      stateClass = 'finished';
+    }
+
+    return `
+      <div class="picks-live-ticker-item ${stateClass}">
+        <span>${escapeHtml(teams.home)} <strong>${score[0]}:${score[1]}</strong> ${escapeHtml(teams.away)}</span>
+        <span class="ticker-state">${escapeHtml(stateLabel)}</span>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = `<div class="picks-live-ticker-track">${items}</div>`;
+}
+
+function updateLivePickTickers() {
+  document.querySelectorAll('[data-pick-live]').forEach(element => {
+    const index = Number(element.dataset.pickLive);
+    const pick = state.picks[index];
+    if (pick) {
+      element.innerHTML = renderPickLiveTicker(pick, index);
+    }
+  });
+
+  renderPicksLiveTicker();
+}
 
 /* =========================================================
    PICKS
    ========================================================= */
 
-function getPickStatus(
-  pick,
-  now = Date.now()
-) {
+function renderPicks() {
+  const grid = $('#pickGrid');
+  if (!grid) return;
 
-  const start =
-    new Date(
-      pick.startAt
-    ).getTime();
-
-
-  if (
-    !Number.isFinite(start)
-  ) {
-
-    return {
-      status: 'scheduled',
-      remaining: null,
-      elapsed: 0,
-      end: null
-    };
-
+  if (!state.picks.length) {
+    grid.innerHTML = `<div class="empty">Aktuell keine Picks veröffentlicht.</div>`;
+    return;
   }
 
-
-  const duration =
-    Math.max(
-      1,
-      Number(
-        pick.durationMinutes
-      ) || 105
-    );
-
-
-  const end =
-    start +
-    duration * 60 * 1000;
-
-
-  if (now < start) {
-
-    return {
-      status: 'scheduled',
-      remaining: start - now,
-      elapsed: 0,
-      end
-    };
-
-  }
-
-
-  if (now < end) {
-
-    return {
-      status: 'live',
-      remaining: end - now,
-      elapsed: now - start,
-      end
-    };
-
-  }
-
-
-  return {
-    status: 'finished',
-    remaining: 0,
-    elapsed: end - start,
-    end
-  };
-
-}
-
-
-function formatDuration(
-  milliseconds
-) {
-
-  const totalSeconds =
-    Math.max(
-      0,
-      Math.floor(
-        milliseconds / 1000
-      )
-    );
-
-
-  const hours =
-    Math.floor(
-      totalSeconds / 3600
-    );
-
-
-  const minutes =
-    Math.floor(
-      (totalSeconds % 3600) / 60
-    );
-
-
-  const seconds =
-    totalSeconds % 60;
-
-
-  const pad =
-    value =>
-      String(value)
-        .padStart(2, '0');
-
-
-  if (hours > 0) {
-
-    return (
-      `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
-    );
-
-  }
-
-
-  return (
-    `${pad(minutes)}:${pad(seconds)}`
-  );
-
-}
-
-
-function formatStartDate(
-  dateString
-) {
-
-  if (!dateString) {
-    return 'Startzeit nicht festgelegt';
-  }
-
-
-  const date =
-    new Date(
-      dateString
-    );
-
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-
-    return 'Startzeit nicht festgelegt';
-
-  }
-
-
-  return date.toLocaleString(
-    'de-DE',
-    {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }
-  );
-
-}
-
-
-function getPickResult(
-  pick
-) {
-
-  if (
-    typeof pick.result === 'string' &&
-    pick.result
-  ) {
-
-    return pick.result;
-
-  }
-
-
-  /*
-    Für die Demo kann ein Pick nach dem Spiel
-    über result manuell auf "won" oder "lost"
-    gesetzt werden.
-
-    Wenn kein Ergebnis vorhanden ist, zeigen wir
-    nach dem Ende "ERGEBNIS OFFEN" statt ein
-    falsches Ergebnis zu erfinden.
-  */
-
-  return 'pending';
-
-}
-
-
-function pickResultLabel(
-  result
-) {
-
-  if (result === 'won') {
-
-    return {
-      label: '✓ PICK RICHTIG',
-      className: 'pick-won'
-    };
-
-  }
-
-
-  if (result === 'lost') {
-
-    return {
-      label: '✕ PICK FALSCH',
-      className: 'pick-lost'
-    };
-
-  }
-
-
-  return {
-    label: '● ERGEBNIS OFFEN',
-    className: 'pick-pending'
-  };
-
-}
-
-
-function renderPick(
-  pick,
-  index
-) {
-
-  const status =
-    getPickStatus(
-      pick
-    );
-
-
-  const result =
-    getPickResult(
-      pick
-    );
-
-
-  const resultInfo =
-    pickResultLabel(
-      result
-    );
-
-
-  let ticker = '';
-
-
-  if (status.status === 'scheduled') {
-
-    ticker = `
-      <div class="pick-live-ticker pick-scheduled">
-
-        <span class="pick-live-badge">
-          UPCOMING
-        </span>
-
-        <strong>
-          Startet um ${escapeHtml(
-            formatStartDate(
-              pick.startAt
-            )
-          )}
-        </strong>
-
-        ${
-          status.remaining !== null
-            ? `
-              <span>
-                Noch ${escapeHtml(
-                  formatDuration(
-                    status.remaining
-                  )
-                )}
-              </span>
-            `
-            : ''
-        }
-
+  grid.innerHTML = state.picks.map((pick, index) => `
+    <article class="pick-card">
+      <div class="pick-top">
+        <span>${escapeHtml(pick.tag)}</span>
+        <small>#${String(index + 1).padStart(2, '0')}</small>
       </div>
-    `;
 
-  } else if (status.status === 'live') {
+      <small class="pick-sport">${escapeHtml(pick.sport)}</small>
 
-    const minute =
-      Math.max(
-        1,
-        Math.floor(
-          status.elapsed / 60000
-        ) + 1
+      <h3>${escapeHtml(pick.match)}</h3>
+
+      <div class="pick-tip">
+        <span>TIPP</span>
+        <strong>${escapeHtml(pick.tip)}</strong>
+      </div>
+
+      <p>${escapeHtml(pick.reason)}</p>
+
+      <div class="pick-bottom">
+        <span>QUOTE</span>
+        <strong>${escapeHtml(pick.odd)}</strong>
+      </div>
+
+      <div data-pick-live="${index}">
+        ${renderPickLiveTicker(pick, index)}
+      </div>
+    </article>
+  `).join('');
+
+  renderPicksLiveTicker();
+}
+
+/* =========================================================
+   GITHUB
+   ========================================================= */
+
+function getGitHubHeaders(
+  token
+) {
+
+  return {
+
+    Accept:
+      'application/vnd.github+json',
+
+    Authorization:
+      `Bearer ${token}`,
+
+    'X-GitHub-Api-Version':
+      '2022-11-28',
+
+    'Content-Type':
+      'application/json'
+
+  };
+
+}
+
+
+function getGitHubSettings() {
+
+  const token =
+    $('#ghToken')
+      ?.value
+      .trim() || '';
+
+
+  const repo =
+    $('#ghRepo')
+      ?.value
+      .trim() || '';
+
+
+  const branch =
+    $('#ghBranch')
+      ?.value
+      .trim() || 'main';
+
+
+  return {
+    token,
+    repo,
+    branch
+  };
+
+}
+
+
+/* =========================================================
+   GITHUB TOKEN TEST
+   ========================================================= */
+
+async function testGitHubToken() {
+
+  if (!isAdmin()) {
+
+    showToast(
+      'Keine Berechtigung.'
+    );
+
+    return;
+
+  }
+
+
+  const {
+    token,
+    repo,
+    branch
+  } =
+    getGitHubSettings();
+
+
+  if (!token) {
+
+    setGitHubStatus(
+      'Bitte zuerst deinen GitHub Token eintragen.',
+      'error'
+    );
+
+    return;
+
+  }
+
+
+  if (
+    !repo ||
+    !repo.includes('/')
+  ) {
+
+    setGitHubStatus(
+      'Repository muss z.B. bodycam1212-lab/axenvo-bet sein.',
+      'error'
+    );
+
+    return;
+
+  }
+
+
+  setGitHubStatus(
+    'GitHub-Zugang wird geprüft …',
+    'loading'
+  );
+
+
+  try {
+
+    const headers =
+      getGitHubHeaders(
+        token
       );
 
 
-    ticker = `
-      <div class="pick-live-ticker pick-live">
+    const repoApi =
+      `https://api.github.com/repos/${repo}`;
 
-        <span class="pick-live-badge">
-          <i></i> LIVE
-        </span>
 
-        <strong>
-          ${minute}'
-        </strong>
+    const repoResponse =
+      await fetch(
+        repoApi,
+        {
+          method: 'GET',
+          headers
+        }
+      );
 
-        <span>
-          Spiel läuft
-        </span>
 
-        <span class="pick-live-time">
-          Noch ${escapeHtml(
-            formatDuration(
-              status.remaining
-            )
-          )}
-        </span>
+    const repoData =
+      await repoResponse
+        .json()
+        .catch(() => ({}));
 
-      </div>
-    `;
 
-  } else {
+    if (!repoResponse.ok) {
 
-    ticker = `
-      <div class="pick-live-ticker pick-finished">
+      throw new Error(
+        repoData.message ||
+        `GitHub Fehler ${repoResponse.status}`
+      );
 
-        <span class="pick-live-badge">
-          ENDE
-        </span>
+    }
 
-        <strong class="${resultInfo.className}">
-          ${resultInfo.label}
-        </strong>
 
-      </div>
-    `;
+    if (
+      repoData.permissions &&
+      repoData.permissions.push === false
+    ) {
+
+      throw new Error(
+        'Der Token kann dieses Repository lesen, aber nicht schreiben.'
+      );
+
+    }
+
+
+    const fileApi =
+      `https://api.github.com/repos/${repo}/contents/picks.json?ref=${encodeURIComponent(branch)}`;
+
+
+    const fileResponse =
+      await fetch(
+        fileApi,
+        {
+          method: 'GET',
+          headers
+        }
+      );
+
+
+    const fileData =
+      await fileResponse
+        .json()
+        .catch(() => ({}));
+
+
+    if (!fileResponse.ok) {
+
+      throw new Error(
+        fileData.message ||
+        `picks.json konnte nicht gelesen werden (${fileResponse.status})`
+      );
+
+    }
+
+
+    setGitHubStatus(
+      `✓ GitHub funktioniert. Repository und picks.json auf "${branch}" sind erreichbar.`,
+      'ok'
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      'GitHub Token Test fehlgeschlagen:',
+      error
+    );
+
+
+    setGitHubStatus(
+      `✕ ${error.message}`,
+      'error'
+    );
 
   }
-
-
-  return `
-
-    <article
-      class="pick-card"
-      data-pick-index="${index}"
-    >
-
-      <div class="pick-card-top">
-
-        <span class="pick-sport">
-          ${escapeHtml(pick.sport)}
-        </span>
-
-        <span class="pick-tag">
-          ${escapeHtml(pick.tag)}
-        </span>
-
-      </div>
-
-
-      <div class="pick-match">
-
-        ${escapeHtml(pick.match)}
-
-      </div>
-
-
-      ${ticker}
-
-
-      <div class="pick-tip">
-
-        <small>
-          WINTIQ PICK
-        </small>
-
-        <strong>
-          ${escapeHtml(pick.tip)}
-        </strong>
-
-      </div>
-
-
-      <div class="pick-reason">
-
-        ${escapeHtml(pick.reason)}
-
-      </div>
-
-
-      <div class="pick-meta">
-
-        <span>
-          Quote ${escapeHtml(pick.odd || '—')}
-        </span>
-
-        <span>
-          Start:
-          ${escapeHtml(
-            formatStartDate(
-              pick.startAt
-            )
-          )}
-        </span>
-
-      </div>
-
-    </article>
-
-  `;
 
 }
 
 
-function renderPicks() {
+function setGitHubStatus(
+  message,
+  type = ''
+) {
 
-  const container =
-    $('#pickGrid');
+  const status =
+    $('#ghStatus');
 
-  if (!container) return;
+  if (!status) {
+    return;
+  }
 
 
-  if (
-    !Array.isArray(
-      state.picks
-    ) ||
-    !state.picks.length
-  ) {
+  status.textContent =
+    message;
 
-    container.innerHTML = `
-      <div class="password-inbox-empty">
-        Aktuell keine Picks vorhanden.
-      </div>
-    `;
+  status.className =
+    `github-status ${type}`;
+
+}
+
+
+/* =========================================================
+   GITHUB PUBLISH
+   ========================================================= */
+
+async function publishPicksToGitHub() {
+
+  if (!isAdmin()) {
+
+    showToast(
+      'Keine Berechtigung.'
+    );
 
     return;
 
   }
 
 
-  container.innerHTML =
-    state.picks
-      .map(
-        (pick, index) =>
-          renderPick(
-            pick,
-            index
-          )
+  const btn =
+    $('#publishGitHub');
+
+
+  const {
+    token,
+    repo,
+    branch
+  } =
+    getGitHubSettings();
+
+
+  if (!token) {
+
+    showToast(
+      'GitHub Token fehlt.'
+    );
+
+    setGitHubStatus(
+      'Bitte zuerst den GitHub Token eintragen.',
+      'error'
+    );
+
+    return;
+
+  }
+
+
+  if (
+    !repo ||
+    !repo.includes('/')
+  ) {
+
+    showToast(
+      'Repository ist ungültig.'
+    );
+
+    return;
+
+  }
+
+
+  if (btn) {
+
+    btn.disabled = true;
+
+    btn.textContent =
+      'Wird veröffentlicht …';
+
+  }
+
+
+  setGitHubStatus(
+    'Picks werden zu GitHub gesendet …',
+    'loading'
+  );
+
+
+  try {
+
+    const headers =
+      getGitHubHeaders(
+        token
+      );
+
+
+    const api =
+      `https://api.github.com/repos/${repo}/contents/picks.json`;
+
+
+    const currentResponse =
+      await fetch(
+        `${api}?ref=${encodeURIComponent(branch)}`,
+        {
+          method: 'GET',
+          headers
+        }
+      );
+
+
+    let sha = null;
+
+
+    if (currentResponse.ok) {
+
+      const currentFile =
+        await currentResponse.json();
+
+      sha =
+        currentFile.sha;
+
+    } else if (
+      currentResponse.status !== 404
+    ) {
+
+      const errorData =
+        await currentResponse
+          .json()
+          .catch(() => ({}));
+
+
+      throw new Error(
+        errorData.message ||
+        `GitHub Fehler ${currentResponse.status}`
+      );
+
+    }
+
+
+    const content =
+      JSON.stringify(
+        {
+          picks:
+            state.picks
+        },
+        null,
+        2
+      ) + '\n';
+
+
+    const encodedContent =
+      utf8ToBase64(
+        content
+      );
+
+
+    const body = {
+
+      message:
+        'Update WINTIQ picks',
+
+      content:
+        encodedContent,
+
+      branch:
+        branch
+
+    };
+
+
+    if (sha) {
+
+      body.sha =
+        sha;
+
+    }
+
+
+    const response =
+      await fetch(
+        api,
+        {
+          method: 'PUT',
+          headers,
+          body:
+            JSON.stringify(body)
+        }
+      );
+
+
+    const result =
+      await response
+        .json()
+        .catch(() => ({}));
+
+
+    if (!response.ok) {
+
+      let message =
+        result.message ||
+        `GitHub Fehler ${response.status}`;
+
+
+      if (
+        response.status === 401
+      ) {
+
+        message =
+          'GitHub Token ist ungültig oder abgelaufen.';
+
+      }
+
+
+      if (
+        response.status === 403
+      ) {
+
+        message =
+          result.message ||
+          'GitHub verweigert den Schreibzugriff.';
+
+      }
+
+
+      if (
+        response.status === 409
+      ) {
+
+        message =
+          'GitHub meldet einen Konflikt. Bitte erneut versuchen.';
+
+      }
+
+
+      throw new Error(
+        message
+      );
+
+    }
+
+
+    const tokenInput =
+      $('#ghToken');
+
+
+    if (tokenInput) {
+      tokenInput.value = '';
+    }
+
+
+    setGitHubStatus(
+      '✓ Picks erfolgreich zu GitHub gesendet.',
+      'ok'
+    );
+
+
+    showToast(
+      'Picks erfolgreich zu GitHub gesendet ✓'
+    );
+
+
+    setTimeout(
+      loadPublishedPicks,
+      1200
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      'GitHub Veröffentlichung fehlgeschlagen:',
+      error
+    );
+
+
+    setGitHubStatus(
+      `✕ ${error.message}`,
+      'error'
+    );
+
+
+    showToast(
+      `Fehler: ${error.message}`
+    );
+
+
+  } finally {
+
+    if (btn) {
+
+      btn.disabled = false;
+
+      btn.textContent =
+        'Picks zu GitHub senden';
+
+    }
+
+  }
+
+}
+
+
+/* =========================================================
+   PICKS AUS GITHUB LADEN
+   ========================================================= */
+
+async function loadPublishedPicks() {
+
+  const repo =
+    $('#ghRepo')
+      ?.value
+      .trim() ||
+    'bodycam1212-lab/axenvo-bet';
+
+
+  const branch =
+    $('#ghBranch')
+      ?.value
+      .trim() ||
+    'main';
+
+
+  try {
+
+    const api =
+      `https://api.github.com/repos/${repo}/contents/picks.json?ref=${encodeURIComponent(branch)}`;
+
+
+    const response =
+      await fetch(
+        api,
+        {
+          method: 'GET',
+
+          headers: {
+            Accept:
+              'application/vnd.github+json',
+
+            'X-GitHub-Api-Version':
+              '2022-11-28'
+          },
+
+          cache:
+            'no-store'
+        }
+      );
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        `picks.json konnte nicht geladen werden (${response.status})`
+      );
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    if (!data.content) {
+
+      throw new Error(
+        'GitHub hat keinen Dateiinhalt geliefert.'
+      );
+
+    }
+
+
+    const binary =
+      atob(
+        data.content.replace(
+          /\n/g,
+          ''
+        )
+      );
+
+
+    const bytes =
+      Uint8Array.from(
+        binary,
+        char =>
+          char.charCodeAt(0)
+      );
+
+
+    const content =
+      new TextDecoder()
+        .decode(bytes);
+
+
+    const remote =
+      JSON.parse(
+        content
+      );
+
+
+    if (
+      Array.isArray(
+        remote.picks
       )
-      .join('');
+    ) {
 
-}
+      state.picks =
+        remote.picks;
+
+      saveState();
+
+      renderPicks();
+
+    }
 
 
-function updateLivePickTickers() {
+  } catch (error) {
 
-  const container =
-    $('#pickGrid');
-
-  if (!container) return;
-
-
-  if (
-    !Array.isArray(
-      state.picks
-    )
-  ) {
-
-    return;
+    console.warn(
+      'Remote picks konnten nicht geladen werden:',
+      error
+    );
 
   }
-
-
-  /*
-    Die Picks werden jede Sekunde neu gerendert.
-    Dadurch werden Countdown, LIVE-Status,
-    Spielminute und Restzeit sofort aktualisiert.
-  */
-
-  renderPicks();
 
 }
 
@@ -2426,7 +2812,7 @@ function openAdmin() {
   if (!isAdmin()) {
 
     showToast(
-      'Keine Berechtigung.'
+      'Kein Zugriff auf den Admin-Bereich.'
     );
 
     return;
@@ -2437,13 +2823,22 @@ function openAdmin() {
   const panel =
     $('#adminPanel');
 
-  if (!panel) return;
+  if (!panel) {
+    return;
+  }
+
 
   fillAdminForm();
 
   panel.classList.remove(
     'hidden'
   );
+
+
+  /*
+    Beim Öffnen des Admin-Bereichs
+    direkt das Postfach aktualisieren.
+  */
 
   loadPasswordRequests();
 
@@ -2612,7 +3007,6 @@ function renderAdminPicks() {
                 >
               </label>
 
-
               <label>
                 Dauer (Min.)
                 <input
@@ -2623,37 +3017,6 @@ function renderAdminPicks() {
                   value="${escapeHtml(pick.durationMinutes || 105)}"
                 >
               </label>
-
-
-              <label>
-                Ergebnis
-                <select
-                  data-field="result"
-                  data-index="${index}"
-                >
-                  <option
-                    value="pending"
-                    ${pick.result === 'pending' || !pick.result ? 'selected' : ''}
-                  >
-                    Noch offen
-                  </option>
-
-                  <option
-                    value="won"
-                    ${pick.result === 'won' ? 'selected' : ''}
-                  >
-                    Pick richtig
-                  </option>
-
-                  <option
-                    value="lost"
-                    ${pick.result === 'lost' ? 'selected' : ''}
-                  >
-                    Pick falsch
-                  </option>
-                </select>
-              </label>
-
 
               <label class="full">
 
@@ -2687,21 +3050,25 @@ function renderAdminPicks() {
         'input',
         event => {
 
-          updateAdminPickField(
-            event.target
-          );
-
-        }
-      );
+          const index =
+            Number(
+              event.target.dataset.index
+            );
 
 
-      input.addEventListener(
-        'change',
-        event => {
+          const field =
+            event.target.dataset.field;
 
-          updateAdminPickField(
-            event.target
-          );
+
+          if (
+            state.picks[index] &&
+            field
+          ) {
+
+            state.picks[index][field] =
+              event.target.value;
+
+          }
 
         }
       );
@@ -2737,52 +3104,6 @@ function renderAdminPicks() {
       );
 
     });
-
-}
-
-
-function updateAdminPickField(
-  target
-) {
-
-  const index =
-    Number(
-      target.dataset.index
-    );
-
-
-  const field =
-    target.dataset.field;
-
-
-  if (
-    !state.picks[index] ||
-    !field
-  ) {
-
-    return;
-
-  }
-
-
-  let value =
-    target.value;
-
-
-  if (
-    field === 'durationMinutes'
-  ) {
-
-    value =
-      Number(
-        value
-      ) || 105;
-
-  }
-
-
-  state.picks[index][field] =
-    value;
 
 }
 
@@ -2825,16 +3146,10 @@ function addPick() {
       '1.90',
 
     startAt:
-      new Date(
-        Date.now() +
-        30 * 60 * 1000
-      ).toISOString(),
+      new Date(Date.now() + 30 * 60 * 1000).toISOString(),
 
     durationMinutes:
-      105,
-
-    result:
-      'pending'
+      105
 
   });
 
@@ -2879,38 +3194,6 @@ function saveAdmin() {
   state.pulse =
     $('#aPulse')?.value ||
     DEFAULTS.pulse;
-
-
-  /*
-    Normalisierung der Pick-Daten,
-    damit Startzeit, Dauer und Ergebnis
-    zuverlässig gespeichert werden.
-  */
-
-  state.picks =
-    state.picks.map(
-      pick => ({
-
-        ...pick,
-
-        startAt:
-          pick.startAt ||
-          new Date(
-            Date.now() +
-            30 * 60 * 1000
-          ).toISOString(),
-
-        durationMinutes:
-          Number(
-            pick.durationMinutes
-          ) || 105,
-
-        result:
-          pick.result ||
-          'pending'
-
-      })
-    );
 
 
   saveState();
@@ -2980,409 +3263,6 @@ function resetAdmin() {
   showToast(
     'Demo wurde zurückgesetzt.'
   );
-
-}
-
-
-/* =========================================================
-   GITHUB
-   ========================================================= */
-
-async function testGitHubToken() {
-
-  const token =
-    $('#ghToken')?.value.trim();
-
-  const repo =
-    $('#ghRepo')?.value.trim();
-
-  const branch =
-    $('#ghBranch')?.value.trim() ||
-    'main';
-
-  const status =
-    $('#ghStatus');
-
-
-  if (!token) {
-
-    if (status) {
-
-      status.className =
-        'github-status error';
-
-      status.textContent =
-        'Bitte GitHub Token eingeben.';
-
-    }
-
-    return;
-
-  }
-
-
-  if (!repo || !repo.includes('/')) {
-
-    if (status) {
-
-      status.className =
-        'github-status error';
-
-      status.textContent =
-        'Repository muss owner/repository sein.';
-
-    }
-
-    return;
-
-  }
-
-
-  if (status) {
-
-    status.className =
-      'github-status loading';
-
-    status.textContent =
-      'Token wird geprüft …';
-
-  }
-
-
-  try {
-
-    const response =
-      await fetch(
-        `https://api.github.com/repos/${repo}`,
-        {
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-
-            Accept:
-              'application/vnd.github+json'
-          }
-        }
-      );
-
-
-    if (!response.ok) {
-
-      throw new Error(
-        `GitHub antwortet mit ${response.status}.`
-      );
-
-    }
-
-
-    const data =
-      await response.json();
-
-
-    if (status) {
-
-      status.className =
-        'github-status ok';
-
-      status.textContent =
-        `✓ Zugriff auf ${data.full_name} · Branch ${branch}`;
-
-    }
-
-  } catch (error) {
-
-    console.error(
-      'GitHub Token Prüfung fehlgeschlagen:',
-      error
-    );
-
-    if (status) {
-
-      status.className =
-        'github-status error';
-
-      status.textContent =
-        error.message ||
-        'GitHub Token konnte nicht geprüft werden.';
-
-    }
-
-  }
-
-}
-
-
-async function publishPicksToGitHub() {
-
-  if (!isAdmin()) {
-
-    showToast(
-      'Keine Berechtigung.'
-    );
-
-    return;
-
-  }
-
-
-  const token =
-    $('#ghToken')?.value.trim();
-
-  const repo =
-    $('#ghRepo')?.value.trim();
-
-  const branch =
-    $('#ghBranch')?.value.trim() ||
-    'main';
-
-
-  if (!token) {
-
-    showToast(
-      'Bitte GitHub Token eingeben.'
-    );
-
-    return;
-
-  }
-
-
-  if (
-    !repo ||
-    !repo.includes('/')
-  ) {
-
-    showToast(
-      'Repository muss owner/repository sein.'
-    );
-
-    return;
-
-  }
-
-
-  const path =
-    'picks.json';
-
-
-  const content =
-    JSON.stringify(
-      state.picks,
-      null,
-      2
-    );
-
-
-  const encodedContent =
-    utf8ToBase64(
-      content
-    );
-
-
-  try {
-
-    let sha = null;
-
-
-    const existing =
-      await fetch(
-        `https://api.github.com/repos/${repo}/contents/${path}?ref=${encodeURIComponent(branch)}`,
-        {
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-
-            Accept:
-              'application/vnd.github+json'
-          }
-        }
-      );
-
-
-    if (existing.ok) {
-
-      const existingData =
-        await existing.json();
-
-      sha =
-        existingData.sha;
-
-    } else if (
-      existing.status !== 404
-    ) {
-
-      const errorData =
-        await existing.json()
-          .catch(
-            () => ({})
-          );
-
-      throw new Error(
-        errorData.message ||
-        `GitHub Fehler ${existing.status}`
-      );
-
-    }
-
-
-    const body = {
-
-      message:
-        'Update WINTIQ Picks',
-
-      content:
-        encodedContent,
-
-      branch
-
-    };
-
-
-    if (sha) {
-      body.sha = sha;
-    }
-
-
-    const response =
-      await fetch(
-        `https://api.github.com/repos/${repo}/contents/${path}`,
-        {
-          method: 'PUT',
-
-          headers: {
-            Authorization:
-              `Bearer ${token}`,
-
-            Accept:
-              'application/vnd.github+json',
-
-            'Content-Type':
-              'application/json'
-          },
-
-          body:
-            JSON.stringify(body)
-        }
-      );
-
-
-    const data =
-      await response
-        .json()
-        .catch(
-          () => ({})
-        );
-
-
-    if (!response.ok) {
-
-      throw new Error(
-        data.message ||
-        `GitHub Fehler ${response.status}`
-      );
-
-    }
-
-
-    showToast(
-      'Picks erfolgreich zu GitHub gesendet ✓'
-    );
-
-
-  } catch (error) {
-
-    console.error(
-      'GitHub Veröffentlichung fehlgeschlagen:',
-      error
-    );
-
-    showToast(
-      error.message ||
-      'Picks konnten nicht veröffentlicht werden.'
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   LOAD PUBLISHED PICKS
-   ========================================================= */
-
-async function loadPublishedPicks() {
-
-  try {
-
-    const response =
-      await fetch(
-        'picks.json',
-        {
-          cache:
-            'no-store'
-        }
-      );
-
-
-    if (!response.ok) {
-      return;
-    }
-
-
-    const published =
-      await response.json();
-
-
-    if (
-      Array.isArray(
-        published
-      ) &&
-      published.length
-    ) {
-
-      state.picks =
-        published.map(
-          pick => ({
-
-            ...pick,
-
-            startAt:
-              pick.startAt ||
-              new Date(
-                Date.now() +
-                30 * 60 * 1000
-              ).toISOString(),
-
-            durationMinutes:
-              Number(
-                pick.durationMinutes
-              ) || 105,
-
-            result:
-              pick.result ||
-              'pending'
-
-          })
-        );
-
-
-      renderPicks();
-
-    }
-
-  } catch (error) {
-
-    /*
-      picks.json ist optional.
-      Bei einer reinen Demo bleibt
-      der lokale State erhalten.
-    */
-
-    console.info(
-      'Keine veröffentlichten picks.json geladen.'
-    );
-
-  }
 
 }
 
@@ -3654,16 +3534,18 @@ function init() {
 
 
   setInterval(
-    updateCountdown,
+    () => {
+      updateCountdown();
+      updateLivePickTickers();
+    },
     1000
   );
 
 
-  setInterval(
-    updateLivePickTickers,
-    1000
-  );
 
+  /*
+    picks.json beim Laden aktualisieren.
+  */
 
   loadPublishedPicks();
 
