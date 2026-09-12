@@ -1,0 +1,9 @@
+{
+  "name":"WINTIQ Sports Intelligence",
+  "short_name":"WINTIQ",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#07090c",
+  "theme_color":"#080a0d",
+  "icons":[]
+}
