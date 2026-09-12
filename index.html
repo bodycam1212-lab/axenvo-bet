@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
 <meta name="description" content="WINTIQ BET — private demo sportsbook concept">
-<title>WINTIQ</title>
+<title>WINTIQ BET — Private Demo</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,51 +15,246 @@
 <link rel="stylesheet" href="styles.css">
 
 <style>
-  /* GitHub Admin */
-  .github-token-field {
-    grid-column: 1 / -1;
-  }
+/* =========================================================
+   GITHUB ADMIN
+   ========================================================= */
 
-  .github-token-field input {
-    width: 100%;
-    min-height: 54px;
-    font-size: 16px;
-    box-sizing: border-box;
-  }
+.github-token-field {
+  grid-column: 1 / -1;
+}
 
-  .github-test-row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-top: 14px;
-    flex-wrap: wrap;
-  }
+.github-token-field input {
+  width: 100%;
+  min-height: 54px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
 
-  .github-status {
-    font-size: 13px;
-    line-height: 1.45;
-    opacity: .9;
-  }
+.github-test-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
 
-  .github-status.ok {
-    color: #b6ff4a;
-  }
+.github-status {
+  font-size: 13px;
+  line-height: 1.45;
+  opacity: .9;
+}
 
-  .github-status.error {
-    color: #ff7777;
-  }
+.github-status.ok {
+  color: #b6ff4a;
+}
 
-  .github-status.loading {
-    opacity: .65;
-  }
+.github-status.error {
+  color: #ff7777;
+}
+
+.github-status.loading {
+  opacity: .65;
+}
+
+
+/* =========================================================
+   PASSWORD RESET
+   ========================================================= */
+
+.forgot-password {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.forgot-password button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  opacity: .8;
+  font: inherit;
+}
+
+.forgot-password button:hover {
+  opacity: 1;
+}
+
+.reset-box {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.reset-box input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.reset-message {
+  min-height: 20px;
+  font-size: 13px;
+}
+
+.reset-message.error {
+  color: #ff7777;
+}
+
+.reset-message.ok {
+  color: #b6ff4a;
+}
+
+
+/* =========================================================
+   PASSWORD REQUEST INBOX
+   ========================================================= */
+
+.password-inbox {
+  margin-top: 30px;
+  border-top: 1px solid rgba(255,255,255,.1);
+  padding-top: 24px;
+}
+
+.password-inbox-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.password-inbox-head strong {
+  font-size: 18px;
+}
+
+.password-inbox-head small {
+  opacity: .65;
+}
+
+.password-request-list {
+  display: grid;
+  gap: 12px;
+}
+
+.password-request {
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.025);
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.password-request.pending {
+  border-color: rgba(182,255,74,.35);
+}
+
+.password-request.done {
+  opacity: .55;
+}
+
+.password-request-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.password-request-user {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.password-request-status {
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: 99px;
+  border: 1px solid rgba(255,255,255,.15);
+}
+
+.password-request-status.pending {
+  color: #b6ff4a;
+}
+
+.password-request-status.done {
+  color: #aaa;
+}
+
+.password-request-meta {
+  font-size: 12px;
+  opacity: .65;
+  margin-bottom: 14px;
+}
+
+.password-request-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.password-change-box {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(0,0,0,.2);
+  display: grid;
+  gap: 10px;
+}
+
+.password-change-box input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.password-inbox-empty {
+  padding: 18px;
+  border: 1px dashed rgba(255,255,255,.15);
+  border-radius: 10px;
+  opacity: .6;
+  text-align: center;
+}
+
+.inbox-count {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 99px;
+  background: #b6ff4a;
+  color: #111;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+
+/* =========================================================
+   USER INFO
+   ========================================================= */
+
+.current-user {
+  font-size: 12px;
+  opacity: .7;
+  margin-right: 5px;
+}
+
+.hidden {
+  display: none !important;
+}
 </style>
 
 </head>
 
 <body class="locked">
 
-<!-- LOGIN -->
+
+<!-- =========================================================
+     LOGIN
+     ========================================================= -->
+
 <div id="loginGate" class="gate">
+
   <div class="gate-glow"></div>
 
   <div class="gate-card">
@@ -112,6 +307,12 @@
 
       <small id="loginError"></small>
 
+      <div class="forgot-password">
+        <button id="forgotPasswordBtn" type="button">
+          Passwort vergessen?
+        </button>
+      </div>
+
     </form>
 
     <div class="gate-foot">
@@ -121,13 +322,18 @@
     </div>
 
   </div>
+
 </div>
 
 
-<!-- APP -->
+<!-- =========================================================
+     APP
+     ========================================================= -->
+
 <div id="app" class="app-hidden">
 
   <!-- TOPBAR -->
+
   <div class="topbar">
 
     <div>
@@ -137,8 +343,9 @@
     </div>
 
     <div class="top-actions">
+      <span class="current-user" id="currentUserLabel"></span>
       <span>PRIVATE DEMO</span>
-      <button id="adminOpen">ADMIN</button>
+      <button id="adminOpen" class="hidden">ADMIN</button>
       <button id="logout">LOCK</button>
     </div>
 
@@ -146,6 +353,7 @@
 
 
   <!-- NAV -->
+
   <header class="nav">
 
     <button class="hamb" id="hamb">☰</button>
@@ -172,6 +380,7 @@
 
 
   <!-- MOBILE NAV -->
+
   <div class="mobile" id="mobile">
     <a href="#live">Live</a>
     <a href="#picks">Picks</a>
@@ -183,6 +392,7 @@
   <main id="top">
 
     <!-- HERO -->
+
     <section class="hero">
 
       <div class="hero-bg"></div>
@@ -213,6 +423,7 @@
         </p>
 
         <div class="hero-buttons">
+
           <a class="primary" href="#live">
             Live entdecken <span>→</span>
           </a>
@@ -220,6 +431,7 @@
           <a class="ghost" href="#picks">
             Unsere Picks <span>↗</span>
           </a>
+
         </div>
 
       </div>
@@ -240,6 +452,7 @@
 
 
     <!-- TICKER -->
+
     <section class="ticker">
 
       <div class="ticker-label">
@@ -247,6 +460,7 @@
       </div>
 
       <div class="ticker-track">
+
         <span>
           FC BAYERN <b>2—1</b> DORTMUND
         </span>
@@ -262,22 +476,26 @@
         <span>
           NBA <b>21:00</b> LAKERS · CELTICS
         </span>
+
       </div>
 
     </section>
 
 
     <!-- SPORTS -->
+
     <section class="sports" id="sports">
 
       <div class="section-top">
 
         <div>
+
           <small>SPORT FILTER</small>
 
           <h2>
             Pick your <span>arena.</span>
           </h2>
+
         </div>
 
         <span class="status">
@@ -314,17 +532,20 @@
 
 
     <!-- LIVE -->
+
     <section class="live-section" id="live">
 
       <div class="section-top">
 
         <div>
+
           <small>● LIVE NOW</small>
 
           <h2>
             Im Spiel.<br>
             <span>Im Moment.</span>
           </h2>
+
         </div>
 
         <p>
@@ -340,6 +561,7 @@
 
 
         <!-- BET SLIP -->
+
         <aside class="slip">
 
           <div class="slip-head">
@@ -382,16 +604,19 @@
 
 
     <!-- PICKS -->
+
     <section class="picks" id="picks">
 
       <div class="section-top">
 
         <div>
+
           <small>WINTIQ EDITORIAL</small>
 
           <h2>
             Unsere <span>Picks.</span>
           </h2>
+
         </div>
 
         <div class="pick-note">
@@ -406,16 +631,19 @@
 
 
     <!-- EVENTS -->
+
     <section class="events" id="events">
 
       <div class="section-top">
 
         <div>
+
           <small>VISUAL MATCHDAY</small>
 
           <h2>
             Top <span>Events.</span>
           </h2>
+
         </div>
 
         <a class="arrow-link" href="#live">
@@ -430,6 +658,7 @@
         <article class="event e1">
 
           <div>
+
             <small>FOOTBALL · 11.09.2026</small>
 
             <h3>
@@ -440,6 +669,7 @@
             <a href="#live">
               Märkte entdecken →
             </a>
+
           </div>
 
         </article>
@@ -448,6 +678,7 @@
         <article class="event e2">
 
           <div>
+
             <small>TENNIS · ATP</small>
 
             <h3>
@@ -458,6 +689,7 @@
             <a href="#picks">
               Pick ansehen →
             </a>
+
           </div>
 
         </article>
@@ -466,6 +698,7 @@
         <article class="event e3">
 
           <div>
+
             <small>BASKETBALL · NBA</small>
 
             <h3>
@@ -476,6 +709,7 @@
             <a href="#live">
               Ansehen →
             </a>
+
           </div>
 
         </article>
@@ -486,6 +720,7 @@
 
 
     <!-- EDGE -->
+
     <section class="edge" id="edge">
 
       <div class="edge-copy">
@@ -579,6 +814,7 @@
 
 
     <!-- RELEASE -->
+
     <section class="release">
 
       <small>NEXT MOVE</small>
@@ -605,6 +841,7 @@
 
 
   <!-- FOOTER -->
+
   <footer>
 
     <div>
@@ -633,9 +870,69 @@
 </div>
 
 
-<!-- ========================================================= -->
-<!-- ADMIN PANEL -->
-<!-- ========================================================= -->
+<!-- =========================================================
+     PASSWORD RESET MODAL
+     ========================================================= -->
+
+<div id="resetModal" class="modal hidden">
+
+  <div class="modal-card">
+
+    <button class="modal-close" id="resetClose">
+      ×
+    </button>
+
+    <div class="admin-head">
+
+      <small>
+        WINTIQ ACCOUNT
+      </small>
+
+      <h2>
+        Passwort <span>vergessen?</span>
+      </h2>
+
+      <p>
+        Gib deinen WINTIQ-Benutzernamen ein.
+        Die Anfrage wird an den Administrator übermittelt.
+      </p>
+
+    </div>
+
+    <div class="reset-box">
+
+      <label>
+        Benutzername
+        <input
+          id="resetUsername"
+          autocomplete="username"
+          placeholder="z. B. Ionix87"
+        >
+      </label>
+
+      <button
+        id="sendResetRequest"
+        class="primary"
+        type="button"
+      >
+        Anfrage senden →
+      </button>
+
+      <div
+        id="resetMessage"
+        class="reset-message"
+      ></div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- =========================================================
+     ADMIN PANEL
+     ========================================================= -->
 
 <div id="adminPanel" class="modal hidden">
 
@@ -657,18 +954,18 @@
       </h2>
 
       <p>
-        Änderungen werden nur lokal in diesem Browser gespeichert.
+        Änderungen werden lokal in diesem Browser gespeichert.
       </p>
 
     </div>
 
 
     <!-- ADMIN INPUTS -->
+
     <div class="admin-grid">
 
       <label>
         Hero Titel
-
         <input
           id="aHeroTitle"
           placeholder="SPORT. DATA. MOMENTUM."
@@ -678,7 +975,6 @@
 
       <label>
         Release Datum
-
         <input
           id="aRelease"
           type="date"
@@ -688,7 +984,6 @@
 
       <label class="full">
         Hero Text
-
         <textarea
           id="aHeroText"
           rows="3"
@@ -698,12 +993,12 @@
 
       <label class="full">
         Pulse Text
-
         <input id="aPulse">
       </label>
 
 
       <!-- PICKS -->
+
       <div class="admin-block full">
 
         <div class="admin-block-head">
@@ -728,25 +1023,72 @@
     </div>
 
 
-    <!-- ===================================================== -->
-    <!-- GITHUB PUBLISH -->
-    <!-- ===================================================== -->
+    <!-- =====================================================
+         PASSWORD INBOX
+         ===================================================== -->
+
+    <div class="password-inbox">
+
+      <div class="password-inbox-head">
+
+        <div>
+          <strong>
+            Passwort-Anfragen
+          </strong>
+
+          <small>
+            <span id="pendingResetCount" class="inbox-count">0</span>
+            offene Anfrage(n)
+          </small>
+        </div>
+
+        <button
+          id="refreshPasswordRequests"
+          type="button"
+          class="ghost"
+        >
+          ↻ Aktualisieren
+        </button>
+
+      </div>
+
+
+      <div
+        id="passwordRequestList"
+        class="password-request-list"
+      >
+
+        <div class="password-inbox-empty">
+          Passwort-Anfragen werden geladen …
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         GITHUB PUBLISH
+         ===================================================== -->
 
     <div class="admin-publish">
 
       <small>
+
         <b>GitHub-Veröffentlichung</b> ·
         Speichert deine Picks direkt in
         <code>picks.json</code>.
+
         Dafür wird ein GitHub Fine-grained Token mit
         <b>Contents: Read and write</b> benötigt.
+
         Der Token wird nicht im Projekt gespeichert.
+
       </small>
 
 
       <div class="publish-fields">
 
-        <!-- TOKEN -->
         <label class="github-token-field">
 
           GitHub Token
@@ -761,7 +1103,6 @@
         </label>
 
 
-        <!-- REPOSITORY -->
         <label>
 
           Repository
@@ -775,7 +1116,6 @@
         </label>
 
 
-        <!-- BRANCH -->
         <label>
 
           Branch
@@ -791,7 +1131,6 @@
       </div>
 
 
-      <!-- GITHUB STATUS -->
       <div class="github-test-row">
 
         <button
@@ -813,6 +1152,7 @@
 
 
     <!-- ADMIN ACTIONS -->
+
     <div class="admin-actions">
 
       <button
@@ -856,10 +1196,12 @@
 
 
 <!-- TOAST -->
+
 <div id="toast"></div>
 
 
 <!-- JAVASCRIPT -->
+
 <script src="script.js"></script>
 
 </body>
