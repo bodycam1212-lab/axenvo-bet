@@ -163,15 +163,8 @@ function bindCommon(){
   $("#adminOpen").onclick=()=>{openModal("#adminModal");renderAdmin()};
   $("#adminIntro").value=state.settings.intro;
 }
-function setupMusic(){
-  // Original WebAudio pulse: no copyrighted track is bundled.
-  let ctx=null,master=null,timer=null,on=false;
-  function start(){if(on)return;ctx=ctx||new (window.AudioContext||window.webkitAudioContext)();master=master||ctx.createGain();master.gain.value=Number($("#musicVolume").value);master.connect(ctx.destination);on=true;$("#musicToggle").textContent="♫";toast("WINTIQ Pulse an");const notes=[110,138.59,164.81,220];let i=0;timer=setInterval(()=>{if(!on)return;const o=ctx.createOscillator(),g=ctx.createGain();o.type="sine";o.frequency.value=notes[i++%notes.length];g.gain.setValueAtTime(.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.035,ctx.currentTime+.04);g.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.8);o.connect(g);g.connect(master);o.start();o.stop(ctx.currentTime+.85)},900)}
-  function stop(){on=false;clearInterval(timer);if(master)master.gain.setTargetAtTime(0,ctx.currentTime,.03);$("#musicToggle").textContent="♪";toast("Musik aus")}
-  $("#musicToggle").onclick=()=>on?stop():start();$("#musicVolume").oninput=e=>{if(master)master.gain.value=Number(e.target.value)}
-}
 async function boot(){
-  loadLastFeed();restoreSession();login();bindForgot();bindAdmin();bindCommon();setupMusic();render();
+  loadLastFeed();restoreSession();login();bindForgot();bindAdmin();bindCommon();render();
   if(state.user)refreshFeed().catch(()=>{});
   setInterval(()=>{render()},1000);
   setInterval(()=>{if(state.user)refreshFeed().catch(()=>{})},Math.max(5000,Number(state.settings.refresh||15)*1000));
@@ -179,22 +172,19 @@ async function boot(){
 boot();
 })();
 
-/* ===== WINTIQ REAL MUSIC PLAYER ===== */
+/* ===== WINTIQ TRUE COLORS PLAYER ===== */
 (function initWintiqMusic() {
   const audio = document.getElementById("wintiqMusic");
   const toggle = document.getElementById("musicToggle");
   const volume = document.getElementById("musicVolume");
-  const mute = document.getElementById("musicMute");
-  if (!audio || !toggle || !volume || !mute) return;
+  if (!audio || !toggle || !volume) return;
 
   audio.volume = Number(volume.value || 0.35);
-  let muted = false;
 
   function syncUI() {
     const playing = !audio.paused;
-    toggle.textContent = playing ? "Ⅱ" : "▶";
-    toggle.setAttribute("aria-label", playing ? "Musik pausieren" : "Musik abspielen");
-    mute.textContent = muted || audio.volume === 0 ? "🔇" : "🔊";
+    toggle.textContent = playing ? "True Colors Ⅱ" : "True Colors";
+    toggle.setAttribute("aria-label", playing ? "True Colors pausieren" : "True Colors abspielen");
   }
 
   toggle.addEventListener("click", async () => {
@@ -205,27 +195,17 @@ boot();
         audio.pause();
       }
     } catch (err) {
-      console.warn("WINTIQ music could not start:", err);
+      console.warn("True Colors could not start:", err);
     }
     syncUI();
   });
 
   volume.addEventListener("input", () => {
     audio.volume = Number(volume.value);
-    muted = audio.volume === 0;
-    if (muted) audio.muted = true;
-    else audio.muted = false;
-    syncUI();
-  });
-
-  mute.addEventListener("click", () => {
-    muted = !muted;
-    audio.muted = muted;
     syncUI();
   });
 
   audio.addEventListener("play", syncUI);
   audio.addEventListener("pause", syncUI);
-  audio.addEventListener("volumechange", syncUI);
   syncUI();
 })();

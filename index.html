@@ -36,8 +36,8 @@
   <nav><a href="#picks">Unsere Picks</a><a href="#live">Live Center</a><a href="#stats">Performance</a></nav>
   <div class="top-actions">
     <div id="feedBadge" class="feed-badge"><i></i><span>SYNC</span></div>
-    <button id="musicToggle" class="icon-btn" type="button" title="Musik an/aus">♪</button>
-    <input id="musicVolume" class="volume" type="range" min="0" max="1" step=".01" value=".18" aria-label="Musiklautstärke">
+    <button id="musicToggle" class="icon-btn music-top-btn" type="button" title="True Colors an/aus">True Colors</button>
+    <input id="musicVolume" class="volume" type="range" min="0" max="1" step=".01" value=".35" aria-label="Musiklautstärke">
     <button id="adminOpen" class="admin-btn hidden" type="button">ADMIN</button>
     <button id="logout" class="icon-btn" type="button">LOCK</button>
   </div>
@@ -124,21 +124,9 @@
  </div>
 </div>
 <div id="toast" class="toast"></div>
-
 <script src="script.js?v=release-1" defer></script>
-
-    <audio id="wintiqMusic" preload="metadata" loop>
-      <source src="music/true-colors.mp3" type="audio/mpeg">
-    </audio>
-    <div class="music-player" id="musicPlayer" aria-label="Musiksteuerung">
-      <button id="musicToggle" type="button" class="music-btn" aria-label="Musik an/aus">▶</button>
-      <div class="music-meta">
-        <span class="music-label">WINTIQ SOUND</span>
-        <strong>True Colors</strong>
-      </div>
-      <input id="musicVolume" class="music-volume" type="range" min="0" max="1" step="0.01" value="0.35" aria-label="Lautstärke">
-      <button id="musicMute" type="button" class="music-btn small" aria-label="Stumm">🔊</button>
-    </div>
-
+<audio id="wintiqMusic" preload="metadata" loop>
+  <source src="music/true-colors.mp3" type="audio/mpeg">
+</audio>
 </body>
 </html>
