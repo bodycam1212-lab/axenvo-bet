@@ -1,8 +1,14 @@
 {
-  "pollSeconds": 15,
-  "actionMinutes": 5,
-  "provider": "ESPN scoreboard API",
-  "lookbackDays": 2,
-  "lookaheadDays": 2,
+  "refreshSeconds": 15,
+  "leagues": [
+    "ger.1",
+    "ger.2",
+    "esp.1",
+    "esp.2",
+    "eng.1",
+    "ita.1",
+    "fra.1"
+  ],
+  "source": "ESPN",
   "timezone": "Europe/Berlin"
 }

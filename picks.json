@@ -1,8 +1,26 @@
-{
-  "updatedAt": "2026-09-12T23:45:00+02:00",
-  "picks": [
-    {"id":"pick-1","sport":"FUSSBALL","match":"SC Freiburg — Borussia Mönchengladbach","tip":"Heimsieg","reason":"WINTIQ Edge: Heimvorteil und redaktionelle Matchanalyse.","tag":"TOP PICK","odd":"1.72"},
-    {"id":"pick-2","sport":"FUSSBALL","match":"FC St. Pauli — VfL Wolfsburg","tip":"Doppelte Chance – X2","reason":"WINTIQ Edge: Form, H2H und Auswärtssicherheit.","tag":"EDGE","odd":"1.50"},
-    {"id":"pick-3","sport":"FUSSBALL","match":"Racing Santander — Deportivo Alavés","tip":"Doppelte Chance – X2","reason":"WINTIQ Edge: aktuelle Form und defensiver Matchup-Faktor.","tag":"LALIGA","odd":"1.53"}
-  ]
-}
+[
+  {
+    "id": "pick-1",
+    "sport": "FUSSBALL",
+    "tag": "TOP PICK",
+    "match": "SC Freiburg — Borussia Mönchengladbach",
+    "tip": "Heimsieg",
+    "reason": "WINTIQ Einschätzung: Heimvorteil, Form und Matchup sprechen für Freiburg."
+  },
+  {
+    "id": "pick-2",
+    "sport": "FUSSBALL",
+    "tag": "EDGE",
+    "match": "St. Pauli — VfL Wolfsburg",
+    "tip": "Doppelte Chance – X2",
+    "reason": "WINTIQ Einschätzung: Der Tipp basiert auf Form und defensiver Stabilität."
+  },
+  {
+    "id": "pick-3",
+    "sport": "FUSSBALL",
+    "tag": "LALIGA",
+    "match": "Racing Santander — Deportivo Alavés",
+    "tip": "Doppelte Chance – X2",
+    "reason": "WINTIQ Einschätzung: Form und Matchup sprechen für die Absicherung auf X2."
+  }
+]

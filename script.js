@@ -1,724 +1,168 @@
-'use strict';
+(() => {
+"use strict";
 
-/* WINTIQ — stable frontend controller
-   - Login starts independently from live data
-   - Admin editor for hero, picks and live overrides
-   - Live feed: local JSON + ESPN scoreboard (browser polling, no reload)
-   - No fake status from elapsed time
-*/
-
-const DEFAULT_USERS = Object.freeze({
-  WINTIQ_MASTER: { password: 'W!ntiqMaster#2026X', role: 'admin' },
-  Ionix87: { password: 'Ajjw_291#12_O9s', role: 'user' },
-  Sxne1: { password: 'K211093##duik_', role: 'user' }
-});
-
-const DEFAULTS = {
-  heroTitle: 'SPORT.\nDATA.\nMOMENTUM.',
-  heroText: 'Live-Kontext, klare Daten und redaktionelle Picks. Alles, was sich im Spielmoment verändert, bleibt sichtbar.',
-  release: '2026-09-13',
-  pulse: 'Real-time match intelligence',
-  picks: [
-    { id: 'pick-1', sport: 'FUSSBALL', match: 'SC Freiburg — Borussia Mönchengladbach', tip: 'Heimsieg', reason: 'WINTIQ Edge: Heimvorteil und redaktionelle Matchanalyse.', tag: 'TOP PICK', odd: '1.72' },
-    { id: 'pick-2', sport: 'FUSSBALL', match: 'FC St. Pauli — VfL Wolfsburg', tip: 'Doppelte Chance – X2', reason: 'WINTIQ Edge: Form, H2H und Auswärtssicherheit.', tag: 'EDGE', odd: '1.50' },
-    { id: 'pick-3', sport: 'FUSSBALL', match: 'Racing Santander — Deportivo Alavés', tip: 'Doppelte Chance – X2', reason: 'WINTIQ Edge: aktuelle Form und defensiver Matchup-Faktor.', tag: 'LALIGA', odd: '1.53' }
-  ]
+const DEFAULT_USERS = {
+  WINTIQ_MASTER:{password:"W!ntiqMaster#2026X",role:"admin"},
+  Ionix87:{password:"Ajjw_291#12_O9s",role:"user"},
+  Sxne1:{password:"K211093##duik_",role:"user"}
 };
 
-const API_LEAGUES = {
-  FUSSBALL: ['ger.1', 'ger.2', 'esp.1', 'eng.1', 'ita.1', 'fra.1'],
-  BASKETBALL: ['nba'],
-  TENNIS: []
+const DEFAULT_PICKS = [
+ {id:"pick-1",sport:"FUSSBALL",tag:"TOP PICK",match:"SC Freiburg — Borussia Mönchengladbach",tip:"Heimsieg",reason:"WINTIQ Einschätzung: Heimvorteil, Form und Matchup sprechen für Freiburg."},
+ {id:"pick-2",sport:"FUSSBALL",tag:"EDGE",match:"St. Pauli — VfL Wolfsburg",tip:"Doppelte Chance – X2",reason:"WINTIQ Einschätzung: Der Tipp basiert auf Form und defensiver Stabilität."},
+ {id:"pick-3",sport:"FUSSBALL",tag:"LALIGA",match:"Racing Santander — Deportivo Alavés",tip:"Doppelte Chance – X2",reason:"WINTIQ Einschätzung: Form und Matchup sprechen für die Absicherung auf X2."}
+];
+
+const LEAGUES = ["ger.1","ger.2","esp.1","esp.2","eng.1","ita.1","fra.1"];
+const REFRESH_KEY="wintiqRefreshSeconds";
+const state = {
+  picks: load("wintiqPicks", DEFAULT_PICKS),
+  users: load("wintiqAccounts", DEFAULT_USERS),
+  overrides: load("wintiqOverrides", {}),
+  settings: load("wintiqSettings", {intro:"Redaktionelle Tipps, echte Spielstände und ein Live-Ticker – alles an einem Ort.", refresh:15}),
+  feed:{events:[],updatedAt:null,source:"—",error:null},
+  user:null
 };
 
-const REFRESH_MS = 15000;
-const STATE_VERSION = 6;
-const $ = (s) => document.querySelector(s);
-const $$ = (s) => Array.from(document.querySelectorAll(s));
-const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+function load(key, fallback){try{const v=JSON.parse(localStorage.getItem(key));return v ?? structuredClone(fallback)}catch{return structuredClone(fallback)}}
+function save(key,v){try{localStorage.setItem(key,JSON.stringify(v))}catch{}}
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+const norm=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"");
+function findUser(name){const raw=String(name||"").trim();if(state.users[raw])return [raw,state.users[raw]];const k=Object.keys(state.users).find(x=>x.toLowerCase()===raw.toLowerCase());return k?[k,state.users[k]]:[null,null]}
+function toast(msg){const e=$("#toast");e.textContent=msg;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2500)}
+function splitMatch(s){const a=String(s||"").split(/\s+[—–-]\s+/);return [a[0]||"",a[1]||""]}
+function aliases(s){const n=norm(s);const m={scfreiburg:["freiburg","scfreiburg"],borussiamonchengladbach:["gladbach","monchengladbach","borussiamonchengladbach"],stpauli:["stpauli","fcstpauli"],vflwolfsburg:["wolfsburg","vflwolfsburg"],racingsantander:["racing","racingsantander","realracingclub"],deportivoalaves:["alaves","deportivoalaves"]};return [n,...(m[n]||[])]}
+function sameTeam(a,b){const x=norm(a),y=norm(b);return !!x&&!!y&&(x===y||x.includes(y)||y.includes(x)||aliases(a).some(v=>y.includes(v)||v.includes(y)))}
+function eventTeams(e){const c=e?.competitions?.[0]?.competitors||[];return {home:c.find(x=>x.homeAway==="home")?.team?.displayName||"",away:c.find(x=>x.homeAway==="away")?.team?.displayName||""}}
+function eventScore(e){const c=e?.competitions?.[0]?.competitors||[];return {home:Number(c.find(x=>x.homeAway==="home")?.score||0),away:Number(c.find(x=>x.homeAway==="away")?.score||0)}}
+function status(e){const t=e?.status?.type||{};if(t.completed||t.state==="post")return "finished";if(t.state==="in")return "live";return "upcoming"}
+function start(e){const n=Date.parse(e?.date||"");return Number.isFinite(n)?n:null}
+function minute(e){const d=e?.status?.displayClock||"";const m=String(d).match(/\d+/);return m?m[0]:""}
+function fmtDate(v,time=true){const n=typeof v==="number"?v:Date.parse(v||"");if(!Number.isFinite(n))return "—";return new Intl.DateTimeFormat("de-DE",{day:"2-digit",month:"2-digit",year:"numeric",...(time?{hour:"2-digit",minute:"2-digit"}:{})}).format(n)}
+function fmtClock(v){const n=typeof v==="number"?v:Date.parse(v||"");return Number.isFinite(n)?new Intl.DateTimeFormat("de-DE",{hour:"2-digit",minute:"2-digit"}).format(n):"—"}
+function duration(ms){if(ms<=0)return "jetzt";let s=Math.floor(ms/1000),h=Math.floor(s/3600);s%=3600;let m=Math.floor(s/60),sec=s%60;return h?`${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`:`${m}:${String(sec).padStart(2,"0")}`}
+function currentOverride(p){const o=state.overrides[p.id];return o?.enabled?o:null}
+function findEvent(p){const [h,a]=splitMatch(p.match);return state.feed.events.find(x=>sameTeam(h,x.teams.home)&&sameTeam(a,x.teams.away)) || state.feed.events.find(x=>sameTeam(h,x.teams.away)&&sameTeam(a,x.teams.home)) || null}
+function getLive(p){
+  const o=currentOverride(p);
+  if(o)return {status:o.status||"upcoming",score:o.score||{home:0,away:0},startAt:o.startAt||null,minute:o.minute||"",source:"ADMIN OVERRIDE",events:o.events||[],eventText:o.eventText||""};
+  const e=findEvent(p);
+  if(!e)return {status:"unavailable",score:{home:0,away:0},startAt:null,minute:"",source:"KEIN FEED",events:[],reason:"Kein bestätigtes Spiel im aktuellen Feed."};
+  return {status:status(e.event),score:eventScore(e.event),startAt:start(e.event),minute:minute(e.event),source:"ESPN",events:e.plays||[],teams:e.teams};
+}
+function verdict(p,l){
+  if(l.status!=="finished" && l.status!=="live")return "pending";
+  const h=l.score.home,a=l.score.away,t=norm(p.tip);
+  if(t.includes("x2")||t.includes("auswart"))return a>=h?"correct":"wrong";
+  if(t.includes("1x"))return h>=a?"correct":"wrong";
+  if(t.includes("unentschieden")||t.includes("draw"))return h===a?"correct":"wrong";
+  if(t.includes("heim")||t.includes("home"))return h>a?"correct":"wrong";
+  return "pending";
+}
+function statusText(l){return l.status==="live"?"LIVE":l.status==="upcoming"?"STARTET BALD":l.status==="finished"?"BEENDET":"KEINE DATEN"}
+function scoreText(l){return l.status==="unavailable"?"— : —":`${l.score.home} : ${l.score.away}`}
+function timing(l){if(l.status==="live")return l.minute?`${l.minute}' · LIVE`:"LIVE";if(l.status==="upcoming"&&l.startAt)return `Start ${fmtDate(l.startAt)}`;if(l.status==="finished")return `Endstand · ${fmtDate(l.startAt)}`;return "Kein bestätigter Spielstand"}
 
-let currentUser = null;
-let activeFilter = 'all';
-let liveFeed = { updatedAt: null, source: null, matches: {} };
-let apiEvents = [];
-let apiBusy = false;
-let state = loadState();
-let users = loadUsers();
-
-function clone(value) { return JSON.parse(JSON.stringify(value)); }
-
-function loadUsers() {
-  try {
-    const saved = JSON.parse(localStorage.getItem('wintiqAccounts') || 'null');
-    const merged = { ...clone(DEFAULT_USERS), ...(saved && typeof saved === 'object' ? saved : {}) };
-    return Object.fromEntries(Object.entries(merged).filter(([, a]) => a && typeof a.password === 'string' && a.role));
-  } catch {
-    return clone(DEFAULT_USERS);
-  }
+function render(){
+  const picks=state.picks||[];
+  const live=picks.map(p=>({p,l:getLive(p)}));
+  $("#statPicks").textContent=picks.length;
+  $("#statLive").textContent=live.filter(x=>x.l.status==="live").length;
+  $("#statOpen").textContent=live.filter(x=>x.l.status==="live"||x.l.status==="upcoming").length;
+  const done=live.filter(x=>x.l.status==="finished"), won=done.filter(x=>verdict(x.p,x.l)==="correct").length, lost=done.filter(x=>verdict(x.p,x.l)==="wrong").length;
+  const rate=won+lost?Math.round(won/(won+lost)*100):null;
+  $("#statRate").textContent=rate===null?"—":rate+"%";$("#rateBig").textContent=rate===null?"—":rate+"%";$("#rateBar").style.width=(rate||0)+"%";$("#wonBig").textContent=won;$("#lostBig").textContent=lost;$("#openBig").textContent=picks.length-done.length;
+  $("#pickCount").textContent=picks.length;
+  $("#todayLabel").textContent=new Intl.DateTimeFormat("de-DE",{weekday:"long",day:"2-digit",month:"long",year:"numeric"}).format(new Date());
+  $("#feedTime").textContent=state.feed.updatedAt?`FEED ${fmtClock(state.feed.updatedAt)}`:"FEED —";
+  $("#feedBadge span").textContent=state.feed.error?"FEED OFFLINE":state.feed.updatedAt?"LIVE SYNC":"SYNC";
+  $("#feedBadge i").style.background=state.feed.error?"var(--red)":"var(--acid)";
+  $("#feedBadge i").style.boxShadow=state.feed.error?"0 0 14px var(--red)":"0 0 14px var(--acid)";
+  $("#syncState").textContent=state.feed.error?"OFFLINE":"ONLINE";$("#syncAge").textContent=state.feed.updatedAt?`Letzter Abruf ${fmtClock(state.feed.updatedAt)}`:"Noch kein Abruf";$("#footerFeed").textContent=state.feed.error?"Feed: offline":`Feed: ${state.feed.source}`;
+  renderTicker(live);renderPicks(live);renderMonitor(live);renderEvents(live);
+}
+function renderTicker(items){
+  const el=$("#liveTicker");
+  if(!items.length){el.innerHTML="<div class='ticker-row'><div class='ticker-status'>WINTIQ</div><div>Keine Picks vorhanden.</div><div>—</div><div>—</div></div>";return}
+  el.innerHTML=items.map(({p,l})=>{const [h,a]=splitMatch(p.match);const cls=l.status==="live"?"live":"";return `<div class="ticker-row"><div class="ticker-status ${cls}">${l.status==="live"?"🔴 LIVE":statusText(l)}</div><div><b>${esc(h)}</b> <span>vs.</span> <b>${esc(a)}</b><div class="ticker-meta">${esc(timing(l))} · ${esc(fmtDate(l.startAt,false))}</div></div><div class="ticker-score">${scoreText(l)}</div><div class="ticker-meta">${esc(p.tip)}</div></div>`}).join("");
+}
+function renderPicks(items){
+  $("#pickGrid").innerHTML=items.map(({p,l})=>{const [h,a]=splitMatch(p.match),v=verdict(p,l),statusCls=l.status==="live"?"live":l.status==="upcoming"?"upcoming":l.status==="finished"?"finished":"unavailable";const ev=(l.events||[]).slice(-4).reverse();return `<article class="pick-card"><div class="pick-top"><span class="pick-tag">${esc(p.tag||"WINTIQ PICK")}</span><span class="status ${statusCls}">${l.status==="live"?"🔴 LIVE":esc(statusText(l))}</span></div><div class="pick-body"><div class="sport">${esc(p.sport||"SPORT")}</div><div class="teams">${esc(h)}<br><span>vs.</span><br>${esc(a)}</div><div class="score">${scoreText(l)}</div><div class="match-info"><span class="chip">${esc(timing(l))}</span><span class="chip">${esc(l.startAt?fmtDate(l.startAt,false):"Datum —")}</span><span class="chip">${esc(l.source)}</span></div><div class="tip-box"><span>UNSER TIPP</span><strong>${esc(p.tip)}</strong></div><p class="reason">${esc(p.reason||"")}</p><div class="verdict ${v}">${v==="correct"?(l.status==="live"?"✓ AKTUELL RICHTIG":"✓ PICK RICHTIG"):v==="wrong"?(l.status==="live"?"✕ AKTUELL FALSCH":"✕ PICK FALSCH"):l.status==="unavailable"?"⚠ KEINE BESTÄTIGTEN DATEN":"◌ NOCH OFFEN"}</div>${ev.length?`<div class="events">${ev.map(e=>`<div class="event"><b>${esc(e.clock||"")}</b><span>${esc(e.text||e.type||"Event")}</span></div>`).join("")}</div>`:""}</div></article>`}).join("");
+}
+function renderMonitor(items){
+  const x=items.find(v=>v.l.status==="live")||items.find(v=>v.l.status==="upcoming");
+  const el=$("#heroLiveMatch");
+  if(!x){el.className="monitor-empty";el.textContent="Kein bestätigtes Live-Spiel.";$("#monitorSource").textContent=state.feed.source||"—";return}
+  const [h,a]=splitMatch(x.p.match);el.className="monitor-match";el.innerHTML=`<div class="monitor-status">${x.l.status==="live"?"🔴 LIVE":statusText(x.l)}</div><div class="monitor-teams">${esc(h)} · ${esc(a)}</div><div class="monitor-score">${scoreText(x.l)}</div><div class="monitor-time">${esc(timing(x.l))}</div>`;$("#monitorSource").textContent=x.l.source;
+}
+function renderEvents(items){
+  const ev=[];items.forEach(x=>(x.l.events||[]).slice(-4).forEach(e=>ev.push({p:x.p,e})));
+  $("#liveEvents").innerHTML=ev.length?ev.slice(-12).reverse().map(x=>`<article class="event-card"><h4>${esc(x.p.match)}</h4><b>${esc(x.e.clock||"EVENT")}</b><p>${esc(x.e.text||x.e.type||"Match Event")}</p></article>`).join(""):"<article class='event-card'><h4>Live Events</h4><p>Hier erscheinen bestätigte Tore und Match-Events, sobald der Feed sie liefert.</p></article>";
 }
 
-function saveUsers() {
-  try { localStorage.setItem('wintiqAccounts', JSON.stringify(users)); } catch {}
+async function fetchScoreboard(league,date){
+  const url=`https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard?dates=${date}`;
+  const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error(String(r.status));return r.json();
 }
-
-function findUser(username) {
-  const raw = String(username || '').trim();
-  const exact = users[raw];
-  if (exact) return [raw, exact];
-  const key = Object.keys(users).find((k) => k.toLowerCase() === raw.toLowerCase());
-  return key ? [key, users[key]] : [null, null];
+async function refreshFeed(){
+  const now=new Date(),dates=[];
+  for(let i=-1;i<=1;i++){const d=new Date(now);d.setDate(d.getDate()+i);dates.push(`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`)}
+  const results=await Promise.allSettled(LEAGUES.flatMap(l=>dates.map(d=>fetchScoreboard(l,d))));
+  const events=[];
+  results.forEach(r=>{if(r.status!=="fulfilled")return;(r.value.events||[]).forEach(e=>events.push({event:e,teams:eventTeams(e),league:e.league?.slug||"soccer"}))});
+  state.feed.events=events;state.feed.updatedAt=Date.now();state.feed.source="ESPN";state.feed.error=results.every(r=>r.status==="rejected")?"Alle Feed-Anfragen fehlgeschlagen":null;render();
+  save("wintiqLastFeed",{updatedAt:state.feed.updatedAt,events:events});
 }
+function loadLastFeed(){const f=load("wintiqLastFeed",null);if(f?.events?.length){state.feed={...state.feed,...f,source:"ESPN (cached)"}}}
 
-function loadState() {
-  try {
-    const saved = JSON.parse(localStorage.getItem('wintiqState') || 'null');
-    if (!saved || typeof saved !== 'object') return { ...clone(DEFAULTS), version: STATE_VERSION };
-    const picks = Array.isArray(saved.picks) && saved.picks.length ? saved.picks : clone(DEFAULTS.picks);
-    return { ...clone(DEFAULTS), ...saved, version: STATE_VERSION, picks: picks.map((p, i) => ({ ...clone(DEFAULTS.picks[i % DEFAULTS.picks.length]), ...p, id: p.id || `pick-${i + 1}` })) };
-  } catch {
-    return { ...clone(DEFAULTS), version: STATE_VERSION };
-  }
+function openModal(id){$(id).classList.remove("hidden")}function closeModal(id){$(id).classList.add("hidden")}
+function login(){
+  $("#loginForm").addEventListener("submit",e=>{e.preventDefault();const u=$("#loginUser").value.trim(),p=$("#loginPass").value,[key,acc]=findUser(u);if(acc&&String(acc.password)===String(p)){state.user={username:key,role:acc.role};sessionStorage.setItem("wintiqUser",JSON.stringify(state.user));$("#loginGate").classList.add("hidden");$("#app").classList.remove("hidden");if(acc.role==="admin")$("#adminOpen").classList.remove("hidden");render();refreshFeed().catch(()=>{});toast("Willkommen bei WINTIQ")}else $("#loginError").textContent="Benutzername oder Passwort ist falsch."})
 }
-
-function saveState() {
-  try { localStorage.setItem('wintiqState', JSON.stringify({ ...state, version: STATE_VERSION })); } catch {}
+function restoreSession(){const s=load("wintiqSession",null);const raw=sessionStorage.getItem("wintiqUser");try{state.user=raw?JSON.parse(raw):null}catch{state.user=null}if(state.user){$("#loginGate").classList.add("hidden");$("#app").classList.remove("hidden");if(state.user.role==="admin")$("#adminOpen").classList.remove("hidden")}}
+function saveSession(){if(state.user)sessionStorage.setItem("wintiqUser",JSON.stringify(state.user))}
+function bindForgot(){$("#forgotPasswordBtn").onclick=()=>openModal("#forgotModal");$("#resetRequest").onclick=()=>{const u=$("#resetUser").value.trim(),[key]=findUser(u);if(!key){$("#resetMsg").textContent="Benutzername nicht gefunden.";return}const req=load("wintiqPasswordRequests",[]);req.unshift({id:Date.now(),username:key,createdAt:new Date().toISOString(),status:"pending"});save("wintiqPasswordRequests",req);$("#resetMsg").textContent="Anfrage gespeichert. Bitte Admin kontaktieren.";}}
+function renderAdmin(){
+  if(!state.user||state.user.role!=="admin")return;
+  $("#adminPicks").innerHTML=state.picks.map((p,i)=>`<div class="admin-item"><div class="admin-grid"><label>Tag<input data-p="${i}" data-f="tag" value="${esc(p.tag||"")}" /></label><label>Sport<input data-p="${i}" data-f="sport" value="${esc(p.sport||"")}" /></label><label>Match<input data-p="${i}" data-f="match" value="${esc(p.match||"")}" /></label><label>Tipp<input data-p="${i}" data-f="tip" value="${esc(p.tip||"")}" /></label><label>Einschätzung<textarea data-p="${i}" data-f="reason">${esc(p.reason||"")}</textarea></label><label>ID<input data-p="${i}" data-f="id" value="${esc(p.id||"")}" /></label></div><div class="admin-actions"><button class="btn ghost danger" data-remove="${i}">Pick löschen</button></div></div>`).join("");
+  $$("#adminPicks [data-p]").forEach(e=>e.oninput=()=>{state.picks[+e.dataset.p][e.dataset.f]=e.value;save("wintiqPicks",state.picks);render()});
+  $("#adminUsers").innerHTML=Object.entries(state.users).map(([u,a])=>`<div class="admin-item"><b>${esc(u)}</b><div class="admin-grid"><label>Rolle<select data-user-role="${esc(u)}"><option value="user" ${a.role==="user"?"selected":""}>User</option><option value="admin" ${a.role==="admin"?"selected":""}>Admin</option></select></label><label>Neues Passwort<input type="password" data-user-pass="${esc(u)}" placeholder="nur ändern, wenn nötig"></label><label>Aktion<button class="btn ghost" data-save-user="${esc(u)}">Passwort setzen</button></label></div></div>`).join("");
+  const req=load("wintiqPasswordRequests",[]);
+  $("#adminUsers").insertAdjacentHTML("beforeend",`<div class="admin-item"><b>Passwort-Anfragen</b>${req.length?req.map(r=>`<p>${esc(r.username)} · ${esc(r.status)} · ${esc(fmtDate(r.createdAt))}</p>`).join(""):"<p>Keine Anfragen.</p>"}</div>`);
+  $("#adminLive").innerHTML=state.picks.map(p=>{const o=state.overrides[p.id]||{};return `<div class="admin-item"><b>${esc(p.match)}</b><div class="admin-grid"><label>Override<select data-ov-enable="${p.id}"><option value="0" ${!o.enabled?"selected":""}>Aus</option><option value="1" ${o.enabled?"selected":""}>An</option></select></label><label>Status<select data-ov-status="${p.id}"><option value="upcoming" ${o.status==="upcoming"?"selected":""}>Upcoming</option><option value="live" ${o.status==="live"?"selected":""}>Live</option><option value="finished" ${o.status==="finished"?"selected":""}>Beendet</option><option value="unavailable" ${o.status==="unavailable"?"selected":""}>Keine Daten</option></select></label><label>Startzeit<input type="datetime-local" data-ov-start="${p.id}" value="${o.startAt?new Date(o.startAt).toISOString().slice(0,16):""}"></label><label>Heim<input type="number" data-ov-h="${p.id}" value="${o.score?.home??0}"></label><label>Auswärts<input type="number" data-ov-a="${p.id}" value="${o.score?.away??0}"></label><label>Minute<input data-ov-min="${p.id}" value="${esc(o.minute||"")}"></label><label>Event<input data-ov-event="${p.id}" value="${esc(o.eventText||"")}"></label></div></div>`}).join("");
+  $("#adminIntro").value=state.settings.intro;$("#adminRefresh").value=state.settings.refresh;
 }
-
-function toast(msg) {
-  const e = $('#toast');
-  if (!e) return;
-  e.textContent = msg;
-  e.classList.add('show');
-  clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => e.classList.remove('show'), 2800);
+function bindAdmin(){
+  $("#adminOpen").onclick=()=>{openModal("#adminModal");renderAdmin()};
+  $("#addPick").onclick=()=>{state.picks.push({id:"pick-"+Date.now(),sport:"FUSSBALL",tag:"NEW PICK",match:"Heimteam — Auswärtsteam",tip:"Unser Tipp",reason:"Unsere Einschätzung."});save("wintiqPicks",state.picks);renderAdmin();render()};
+  $("#adminPicks").onclick=e=>{const b=e.target.closest("[data-remove]");if(b){state.picks.splice(+b.dataset.remove,1);save("wintiqPicks",state.picks);renderAdmin();render()}};
+  $("#adminUsers").onclick=e=>{const b=e.target.closest("[data-save-user]");if(!b)return;const u=b.dataset.saveUser,inp=document.querySelector(`[data-user-pass="${CSS.escape(u)}"]`),role=document.querySelector(`[data-user-role="${CSS.escape(u)}"]`);if(inp.value){state.users[u].password=inp.value;save("wintiqAccounts",state.users);inp.value="";toast("Passwort gespeichert ✓")}if(role){state.users[u].role=role.value;save("wintiqAccounts",state.users)}};
+  $("#adminLive").addEventListener("input",e=>{const id=e.target.closest(".admin-item")?.querySelector("[data-ov-enable]")?.dataset.ovEnable;if(!id)return;const o=state.overrides[id]||{};const val=s=>{const x=document.querySelector(`[${s}="${CSS.escape(id)}"]`);return x?.value??""};state.overrides[id]={...o,enabled:val("data-ov-enable")==="1",status:val("data-ov-status"),startAt:val("data-ov-start")?new Date(val("data-ov-start")).toISOString():null,score:{home:Number(val("data-ov-h")||0),away:Number(val("data-ov-a")||0)},minute:val("data-ov-min"),eventText:val("data-ov-event"),events:val("data-ov-event")?[{clock:val("data-ov-min"),type:"EVENT",text:val("data-ov-event")}]:[]};save("wintiqOverrides",state.overrides);render()});
+  $("#saveSite").onclick=()=>{state.settings.intro=$("#adminIntro").value;state.settings.refresh=Math.max(5,Math.min(120,Number($("#adminRefresh").value)||15));save("wintiqSettings",state.settings);render();toast("Website gespeichert ✓")};
+  $("#exportData").onclick=()=>{const blob=new Blob([JSON.stringify({picks:state.picks,settings:state.settings,overrides:state.overrides},null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="wintiq-admin-export.json";a.click();URL.revokeObjectURL(a.href)};
+  $("#clearOverrides").onclick=()=>{state.overrides={};save("wintiqOverrides",{});renderAdmin();render();toast("Live Overrides gelöscht")};
+  $$(".admin-tabs button").forEach(b=>b.onclick=()=>{$$(".admin-tabs button").forEach(x=>x.classList.remove("active"));$$(".admin-tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");$("#"+b.dataset.tab).classList.add("active")});
 }
-
-function closeModal(id) { $(id)?.classList.add('hidden'); }
-
-function norm(s) {
-  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+function bindCommon(){
+  $$(".close").forEach(b=>b.onclick=()=>closeModal("#"+b.dataset.close));
+  $("#logout").onclick=()=>{sessionStorage.removeItem("wintiqUser");location.reload()};
+  $("#adminOpen").onclick=()=>{openModal("#adminModal");renderAdmin()};
+  $("#adminIntro").value=state.settings.intro;
 }
-
-function splitMatch(match) {
-  const x = String(match || '').split(/\s+[—–-]\s+/);
-  return [x[0]?.trim() || '', x[1]?.trim() || ''];
+function setupMusic(){
+  // Original WebAudio pulse: no copyrighted track is bundled.
+  let ctx=null,master=null,timer=null,on=false;
+  function start(){if(on)return;ctx=ctx||new (window.AudioContext||window.webkitAudioContext)();master=master||ctx.createGain();master.gain.value=Number($("#musicVolume").value);master.connect(ctx.destination);on=true;$("#musicToggle").textContent="♫";toast("WINTIQ Pulse an");const notes=[110,138.59,164.81,220];let i=0;timer=setInterval(()=>{if(!on)return;const o=ctx.createOscillator(),g=ctx.createGain();o.type="sine";o.frequency.value=notes[i++%notes.length];g.gain.setValueAtTime(.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.035,ctx.currentTime+.04);g.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.8);o.connect(g);g.connect(master);o.start();o.stop(ctx.currentTime+.85)},900)}
+  function stop(){on=false;clearInterval(timer);if(master)master.gain.setTargetAtTime(0,ctx.currentTime,.03);$("#musicToggle").textContent="♪";toast("Musik aus")}
+  $("#musicToggle").onclick=()=>on?stop():start();$("#musicVolume").oninput=e=>{if(master)master.gain.value=Number(e.target.value)}
 }
-
-function teams(p) {
-  const [home, away] = splitMatch(p.match);
-  return { home, away };
+async function boot(){
+  loadLastFeed();restoreSession();login();bindForgot();bindAdmin();bindCommon();setupMusic();render();
+  if(state.user)refreshFeed().catch(()=>{});
+  setInterval(()=>{render()},1000);
+  setInterval(()=>{if(state.user)refreshFeed().catch(()=>{})},Math.max(5000,Number(state.settings.refresh||15)*1000));
 }
-
-const NAME_ALIASES = {
-  'scfreiburg': ['freiburg', 'scfreiburg'],
-  'borussiamonchengladbach': ['borussiamonchengladbach', 'monchengladbach', 'gladbach'],
-  'fcstpauli': ['stpauli', 'fcstpauli', 'pauli'],
-  'stpauli': ['stpauli', 'fcstpauli', 'pauli'],
-  'vflwolfsburg': ['wolfsburg', 'vflwolfsburg'],
-  'racingsantander': ['racingsantander', 'realracingclub', 'racing', 'santander'],
-  'deportivoalaves': ['deportivoalaves', 'alaves', 'alaveses']
-};
-
-function teamMatches(a, b) {
-  const na = norm(a), nb = norm(b);
-  if (!na || !nb) return false;
-  const aa = [na, ...(NAME_ALIASES[na] || [])];
-  const bb = [nb, ...(NAME_ALIASES[nb] || [])];
-  return aa.some(x => bb.some(y => x === y || x.includes(y) || y.includes(x)));
-}
-
-function fmtDate(ts, withTime = true) {
-  const n = typeof ts === 'number' ? ts : new Date(ts || '').getTime();
-  if (!Number.isFinite(n)) return '—';
-  return new Intl.DateTimeFormat('de-DE', {
-    weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric',
-    ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {})
-  }).format(new Date(n));
-}
-
-function fmtClock(ts) {
-  const n = typeof ts === 'number' ? ts : new Date(ts || '').getTime();
-  return Number.isFinite(n) ? new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(new Date(n)) : '—';
-}
-
-function dateInput(value) {
-  const d = new Date(value || '');
-  if (!Number.isFinite(d.getTime())) return '';
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-}
-
-function statusFromEvent(event) {
-  const t = event?.status?.type || {};
-  if (t.completed || t.state === 'post' || t.name === 'STATUS_FINAL') return 'finished';
-  if (t.state === 'in' || t.name === 'STATUS_IN_PROGRESS') return 'live';
-  return 'upcoming';
-}
-
-function eventTeams(event) {
-  const c = event?.competitions?.[0]?.competitors || [];
-  return {
-    home: c.find(x => x.homeAway === 'home')?.team?.displayName || '',
-    away: c.find(x => x.homeAway === 'away')?.team?.displayName || ''
-  };
-}
-
-function eventScore(event) {
-  const c = event?.competitions?.[0]?.competitors || [];
-  return {
-    home: Number(c.find(x => x.homeAway === 'home')?.score ?? 0),
-    away: Number(c.find(x => x.homeAway === 'away')?.score ?? 0)
-  };
-}
-
-function eventDate(event) { return new Date(event?.date || '').getTime(); }
-
-function eventMinute(event) {
-  const clock = String(event?.status?.displayClock || event?.status?.type?.shortDetail || '');
-  const m = clock.match(/(\d+)(?:\+\d+)?/);
-  return m ? Number(m[1]) : '';
-}
-
-function eventClock(event) {
-  return event?.status?.displayClock || event?.status?.type?.shortDetail || '';
-}
-
-function matchFromApi(p) {
-  const t = teams(p);
-  let hit = apiEvents.find(x => teamMatches(t.home, x.teams.home) && teamMatches(t.away, x.teams.away));
-  if (!hit) hit = apiEvents.find(x => teamMatches(t.home, x.teams.away) && teamMatches(t.away, x.teams.home));
-  return hit || null;
-}
-
-function matchFromFeed(p) { return liveFeed.matches?.[p.id] || null; }
-
-function loadOverrides() {
-  try { return JSON.parse(localStorage.getItem('wintiqLiveOverrides') || '{}'); } catch { return {}; }
-}
-
-function saveOverrides(v) {
-  try { localStorage.setItem('wintiqLiveOverrides', JSON.stringify(v)); } catch {}
-}
-
-function getOverride(p) {
-  const o = loadOverrides()[p.id];
-  return o?.enabled ? o : null;
-}
-
-function buildApiMatch(p, hit) {
-  const e = hit.event;
-  const score = eventScore(e);
-  const status = statusFromEvent(e);
-  return {
-    status,
-    score,
-    startAt: eventDate(e),
-    source: `ESPN · ${hit.league}`,
-    eventId: e.id || null,
-    minute: status === 'live' ? eventMinute(e) : '',
-    displayClock: status === 'live' ? eventClock(e) : (status === 'finished' ? 'FT' : ''),
-    events: Array.isArray(hit.events) ? hit.events : [],
-    lastChecked: new Date().toISOString(),
-    stale: false,
-    reason: ''
-  };
-}
-
-function getLive(p) {
-  const override = getOverride(p);
-  if (override) return {
-    status: override.status || 'upcoming',
-    score: { home: Number(override.score?.home || 0), away: Number(override.score?.away || 0) },
-    startAt: override.startAt || null,
-    source: 'ADMIN OVERRIDE',
-    eventId: null,
-    minute: override.minute || '',
-    displayClock: override.status === 'finished' ? 'FT' : (override.minute ? `${override.minute}'` : ''),
-    events: Array.isArray(override.events) ? override.events : [],
-    lastChecked: new Date().toISOString(),
-    stale: false,
-    reason: ''
-  };
-
-  const api = matchFromApi(p);
-  if (api) return buildApiMatch(p, api);
-
-  const stored = matchFromFeed(p);
-  if (stored) return stored;
-
-  return { status: 'unavailable', score: { home: 0, away: 0 }, startAt: null, source: 'NO VERIFIED FEED', eventId: null, minute: '', displayClock: '', events: [], lastChecked: null, stale: true, reason: 'Für dieses Spiel liegt aktuell keine bestätigte Datenquelle vor.' };
-}
-
-function pickSideOutcome(p, l) {
-  const tip = norm(p.tip);
-  const s = l.score || { home: 0, away: 0 };
-  if (l.status !== 'finished') return 'pending';
-  if (!tip) return 'pending';
-  const draw = s.home === s.away;
-  const homeWin = s.home > s.away;
-  const awayWin = s.away > s.home;
-  if (tip.includes('heimsieg') || tip.includes('homewin')) return homeWin ? 'correct' : 'wrong';
-  if (tip.includes('auswärtssieg') || tip.includes('awaywin')) return awayWin ? 'correct' : 'wrong';
-  if (tip.includes('x2') || tip.includes('doppeltechancex2')) return awayWin || draw ? 'correct' : 'wrong';
-  if (tip.includes('1x') || tip.includes('doppeltechance1x')) return homeWin || draw ? 'correct' : 'wrong';
-  return 'pending';
-}
-
-function verdictLabel(v) {
-  return v === 'correct' ? '✓ PICK RICHTIG' : v === 'wrong' ? '✕ PICK FALSCH' : '◌ ERGEBNIS OFFEN';
-}
-
-function statusLabel(l) {
-  return l.status === 'live' ? 'LIVE' : l.status === 'upcoming' ? 'UPCOMING' : l.status === 'finished' ? 'FINAL' : 'KEINE DATEN';
-}
-
-function timingText(l) {
-  if (l.status === 'live') return l.displayClock || (l.minute !== '' ? `${l.minute}'` : 'LIVE');
-  if (l.status === 'finished') return 'beendet';
-  if (l.status === 'upcoming') return l.startAt ? `Start ${fmtClock(l.startAt)}` : 'Startzeit —';
-  return 'Feed nicht verfügbar';
-}
-
-function dateLine(l) {
-  return l.startAt ? fmtDate(l.startAt, false) : 'Datum —';
-}
-
-function sourceBadge(l) {
-  return l.source || 'Feed';
-}
-
-function eventLines(l) {
-  if (!Array.isArray(l.events) || !l.events.length) return '';
-  const last = l.events.slice(-6).reverse();
-  return `<div class="event-stream"><div class="event-title">MATCH EVENTS</div>${last.map(e => `<div class="event-line"><span>${esc(e.clock || '—')}</span><b>${esc(e.type || 'EVENT')}</b><p>${esc(e.text || '')}</p></div>`).join('')}</div>`;
-}
-
-function liveCard(p, l) {
-  const t = teams(p);
-  const s = l.score || { home: 0, away: 0 };
-  const v = pickSideOutcome(p, l);
-  const klass = l.status === 'live' ? 'is-live' : l.status === 'upcoming' ? 'is-upcoming' : l.status === 'finished' ? 'is-finished' : 'is-unavailable';
-  return `<div class="match-card ${klass}">
-    <div class="match-card-top"><span class="match-status">${l.status === 'live' ? '<i></i>' : ''}${esc(statusLabel(l))}</span><span>${esc(sourceBadge(l))}</span></div>
-    <div class="scoreline"><div><strong>${esc(t.home)}</strong><small>HOME</small></div><div class="score-big">${Number(s.home)} <span>:</span> ${Number(s.away)}</div><div class="away"><strong>${esc(t.away)}</strong><small>AWAY</small></div></div>
-    <div class="match-data"><div><span>📅 DATUM</span><b>${esc(dateLine(l))}</b></div><div><span>🕐 ZEIT</span><b>${esc(l.startAt ? fmtClock(l.startAt) : '—')}</b></div><div><span>⏱ STATUS</span><b>${esc(timingText(l))}</b></div><div><span>◉ FEED</span><b>${esc(l.stale ? 'STALE' : (l.displayClock || 'OK'))}</b></div></div>
-    <div class="verdict ${v}">${verdictLabel(v)}</div>
-    ${l.status === 'unavailable' ? `<div class="data-warning">${esc(l.reason)}</div>` : ''}
-    ${eventLines(l)}
-  </div>`;
-}
-
-function renderPick(p, i) {
-  const l = getLive(p);
-  const t = teams(p);
-  return `<article class="pick-card ${l.status}"><div class="pick-inner">
-    <div class="pick-top"><span class="pick-tag">${esc(p.tag || 'PICK')}</span><span class="pick-number">#${String(i + 1).padStart(2, '0')}</span></div>
-    <div class="pick-sport">${esc(p.sport || 'SPORT')}</div>
-    <h3>${esc(t.home)} <span>vs.</span> ${esc(t.away)}</h3>
-    <div class="tip-row"><span>🎯 WINTIQ TIPP</span><strong>${esc(p.tip)}</strong></div>
-    <p class="pick-reason">${esc(p.reason || '')}</p>
-    <div class="pick-quote"><span>💶 QUOTE</span><strong>${esc(p.odd || '—')}</strong></div>
-    ${liveCard(p, l)}
-  </div></article>`;
-}
-
-function renderPicks() {
-  const grid = $('#pickGrid');
-  if (!grid) return;
-  grid.innerHTML = (state.picks || []).map(renderPick).join('');
-  renderTicker();
-}
-
-function tickerItem(p) {
-  const l = getLive(p), t = teams(p), s = l.score || { home: 0, away: 0 };
-  const stateClass = l.status;
-  const stateText = l.status === 'live' ? '<i></i> LIVE' : l.status === 'upcoming' ? '⏱ BALD' : l.status === 'finished' ? '✓ FINAL' : '⚠ FEED';
-  return `<div class="rail-item ${stateClass}"><span class="rail-state">${stateText}</span><strong>${esc(t.home)} <b>${Number(s.home)}:${Number(s.away)}</b> ${esc(t.away)}</strong><small>${esc(timingText(l))} · ${esc(dateLine(l))}</small></div>`;
-}
-
-function renderTicker() {
-  const box = $('#picksLiveTicker');
-  if (!box) return;
-  const items = (state.picks || []).map(tickerItem).join('');
-  box.innerHTML = items ? `<div class="rail-track"><div class="rail-set">${items}</div><div class="rail-set" aria-hidden="true">${items}</div></div>` : '';
-}
-
-function renderMatchBoard() {
-  const board = $('#matchBoard');
-  if (!board) return;
-  const rows = (state.picks || []).map((p, i) => ({ p, i, l: getLive(p) })).filter(x => activeFilter === 'all' || x.l.status === activeFilter);
-  if (!rows.length) {
-    board.innerHTML = '<div class="empty-state">Keine Partien für diesen Filter.</div>';
-    return;
-  }
-  board.innerHTML = rows.map(({ p, l }) => {
-    const t = teams(p), s = l.score || { home: 0, away: 0 };
-    return `<div class="match-row ${l.status}"><div class="row-status">${l.status === 'live' ? '<i></i>' : ''}${esc(statusLabel(l))}</div><div class="row-team home">${esc(t.home)}</div><strong class="row-score">${Number(s.home)}<span>:</span>${Number(s.away)}</strong><div class="row-team">${esc(t.away)}</div><div class="row-time"><b>${esc(l.startAt ? fmtClock(l.startAt) : '—')}</b><span>${esc(timingText(l))}</span></div></div>`;
-  }).join('');
-}
-
-function calcPerformance() {
-  let won = 0, lost = 0, open = 0;
-  for (const p of state.picks || []) {
-    const v = pickSideOutcome(p, getLive(p));
-    if (v === 'correct') won++; else if (v === 'wrong') lost++; else open++;
-  }
-  const total = won + lost;
-  const rate = total ? Math.round((won / total) * 100) : 0;
-  $('#perfWon').textContent = won;
-  $('#perfLost').textContent = lost;
-  $('#perfOpen').textContent = open;
-  $('#perfRate').textContent = `${rate}%`;
-  $('#perfBar').style.width = `${rate}%`;
-  $('#perfText').textContent = total ? `${won} von ${total} beendeten Picks richtig.` : 'Noch keine beendeten Picks mit bestätigten Daten.';
-  $('#heroCorrect').textContent = `${rate}%`;
-}
-
-function updateMonitor() {
-  const found = (state.picks || []).map(p => ({ p, l: getLive(p) })).find(x => x.l.status === 'live');
-  if (!found) {
-    $('#monitorLabel').textContent = 'NO LIVE MATCH';
-    $('#monitorScore').textContent = '— : —';
-    $('#monitorTeams').textContent = 'Keine bestätigte laufende Partie';
-    $('#monitorStatus').textContent = 'WARTET';
-    $('#monitorTime').textContent = '—';
-    $('#monitorDate').textContent = '—';
-    $('#monitorSource').textContent = liveFeed.source || '—';
-    $('#monitorEvent').textContent = 'Keine erfundenen Live-Daten';
-    return;
-  }
-  const t = teams(found.p), s = found.l.score || { home: 0, away: 0 };
-  $('#monitorLabel').textContent = `${found.p.sport} · ${found.l.minute || 'LIVE'}`;
-  $('#monitorScore').textContent = `${Number(s.home)} : ${Number(s.away)}`;
-  $('#monitorTeams').textContent = `${t.home} — ${t.away}`;
-  $('#monitorStatus').textContent = 'LIVE';
-  $('#monitorTime').textContent = found.l.displayClock || (found.l.minute ? `${found.l.minute}'` : 'LIVE');
-  $('#monitorDate').textContent = found.l.startAt ? fmtDate(found.l.startAt, false) : '—';
-  $('#monitorSource').textContent = found.l.source || 'ESPN';
-  $('#monitorEvent').textContent = found.l.events?.[found.l.events.length - 1]?.text || 'Live-Spiel läuft';
-}
-
-function updateMeta() {
-  const ts = liveFeed.updatedAt ? new Date(liveFeed.updatedAt).getTime() : 0;
-  const age = ts ? Math.max(0, Date.now() - ts) : Infinity;
-  const stale = age > 120000;
-  $('#lastUpdate').textContent = ts ? `FEED · ${fmtClock(ts)}` : 'FEED · —';
-  $('#feedSync').textContent = stale ? 'FEED STALE' : 'LIVE SYNC';
-  $('#feedSource').textContent = stale ? 'PRÜFEN' : (liveFeed.source || 'ESPN / FALLBACK');
-  $('#tickerUpdated').textContent = ts ? `Letzter Datenstand ${fmtClock(ts)}` : 'Noch kein bestätigter Datenstand';
-  $('#heroLiveCount').textContent = (state.picks || []).filter(p => getLive(p).status === 'live').length;
-  $('#heroPickCount').textContent = (state.picks || []).length;
-  $('#heroFeedAge').textContent = stale ? 'STALE' : 'ONLINE';
-}
-
-function updateAll() {
-  renderPicks();
-  renderMatchBoard();
-  calcPerformance();
-  updateMonitor();
-  updateMeta();
-}
-
-async function loadStoredFeed() {
-  try {
-    const response = await fetch(`live-data.json?v=${Date.now()}`, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    if (data && typeof data === 'object') {
-      liveFeed = { updatedAt: data.updatedAt || null, source: data.source || 'Stored feed', matches: data.matches || {} };
-      updateAll();
-    }
-  } catch {
-    updateMeta();
-  }
-}
-
-async function fetchScoreboard(sport, league, date) {
-  const url = `https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard?dates=${date}`;
-  const response = await fetch(url, { cache: 'no-store' });
-  if (!response.ok) throw new Error(`ESPN ${response.status}`);
-  return response.json();
-}
-
-async function loadApiLive() {
-  if (apiBusy) return;
-  apiBusy = true;
-  try {
-    const now = new Date();
-    const dates = [];
-    for (let offset = -2; offset <= 2; offset++) {
-      const d = new Date(now);
-      d.setDate(d.getDate() + offset);
-      dates.push(`${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`);
-    }
-    const leagues = [];
-    for (const p of state.picks || []) {
-      for (const league of API_LEAGUES[p.sport] || []) {
-        const sport = p.sport === 'BASKETBALL' ? 'basketball' : 'soccer';
-        leagues.push({ sport, league });
-      }
-    }
-    const unique = leagues.filter((x, i, arr) => arr.findIndex(y => y.sport === x.sport && y.league === x.league) === i);
-    const requests = unique.flatMap(x => dates.map(date => ({ ...x, date })));
-    const results = await Promise.allSettled(requests.map(r => fetchScoreboard(r.sport, r.league, r.date)));
-    const nextEvents = [];
-    results.forEach((result, idx) => {
-      if (result.status !== 'fulfilled') return;
-      for (const event of result.value?.events || []) {
-        nextEvents.push({ league: requests[idx].league, sport: requests[idx].sport, event, teams: eventTeams(event), events: [] });
-      }
-    });
-    if (nextEvents.length) {
-      apiEvents = nextEvents;
-      liveFeed = { ...liveFeed, updatedAt: new Date().toISOString(), source: 'ESPN · browser live feed' };
-      updateAll();
-    }
-  } catch (error) {
-    console.warn('Live API unavailable:', error);
-  } finally {
-    apiBusy = false;
-  }
-}
-
-async function loadMatchDetails() {
-  const live = (state.picks || []).map(p => ({ p, e: matchFromApi(p) })).filter(x => x.e && statusFromEvent(x.e.event) === 'live');
-  await Promise.all(live.map(async item => {
-    try {
-      const url = `https://site.api.espn.com/apis/site/v2/sports/${item.e.sport}/${item.e.league}/summary?event=${encodeURIComponent(item.e.event.id)}`;
-      const response = await fetch(url, { cache: 'no-store' });
-      if (!response.ok) return;
-      const data = await response.json();
-      item.e.events = (data.plays || []).filter(p => p.text || p.type?.text).slice(-12).map(p => ({ clock: p.clock?.displayValue || '', type: p.type?.text || 'EVENT', text: p.text || '', team: p.team?.displayName || '' }));
-    } catch (error) {
-      console.warn('Match summary unavailable:', error);
-    }
-  }));
-  updateAll();
-}
-
-function renderHero() {
-  $('#heroTitle').innerHTML = esc(state.heroTitle).replace(/\n/g, '<br>');
-  $('#heroText').textContent = state.heroText;
-  $('#pulseText').textContent = state.pulse;
-  $('#releaseDateBig').textContent = state.release;
-  $('#releaseMeta').textContent = state.release;
-  $('#heroDate').textContent = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(new Date());
-}
-
-function countdown() {
-  const target = new Date(`${state.release}T00:00:00`).getTime();
-  const diff = Math.max(0, target - Date.now());
-  const s = Math.floor(diff / 1000);
-  const days = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  const p = n => String(n).padStart(2, '0');
-  $('#timer').textContent = `${p(days)} : ${p(h)} : ${p(m)} : ${p(sec)}`;
-  $('#days').textContent = `${p(days)} DAYS`;
-}
-
-function unlock(user, role) {
-  currentUser = { user, role };
-  sessionStorage.setItem('wintiqUser', JSON.stringify(currentUser));
-  document.body.classList.remove('locked');
-  $('#loginGate')?.classList.add('hidden');
-  $('#app')?.classList.remove('app-hidden');
-  $('#currentUserLabel').textContent = role === 'admin' ? `${user} · ADMIN` : user;
-  $('#adminOpen')?.classList.toggle('hidden', role !== 'admin');
-  updateAll();
-}
-
-function lock() {
-  currentUser = null;
-  sessionStorage.removeItem('wintiqUser');
-  document.body.classList.add('locked');
-  $('#loginGate')?.classList.remove('hidden');
-  $('#app')?.classList.add('app-hidden');
-  closeModal('#adminPanel');
-  closeModal('#resetModal');
-}
-
-function resetRequest() {
-  const input = $('#resetUsername');
-  const m = $('#resetMessage');
-  const u = input?.value.trim() || '';
-  const [resolved] = findUser(u);
-  if (!u || !resolved) { m.textContent = 'Benutzername nicht gefunden.'; m.style.color = '#ff6b75'; return; }
-  const requests = JSON.parse(localStorage.getItem('wintiqPasswordRequests') || '[]');
-  if (!requests.some(x => x.username.toLowerCase() === resolved.toLowerCase() && x.status === 'pending')) requests.unshift({ id: `PW-${Date.now().toString(36).toUpperCase()}`, username: resolved, status: 'pending', createdAt: new Date().toISOString() });
-  localStorage.setItem('wintiqPasswordRequests', JSON.stringify(requests));
-  m.textContent = 'Anfrage gesendet ✓';
-  m.style.color = 'var(--acid)';
-  toast('Passwort-Anfrage gesendet');
-  setTimeout(() => closeModal('#resetModal'), 800);
-}
-
-function renderRequests() {
-  const list = $('#passwordRequestList');
-  if (!list) return;
-  const requests = JSON.parse(localStorage.getItem('wintiqPasswordRequests') || '[]');
-  $('#pendingResetCount').textContent = requests.filter(x => x.status === 'pending').length;
-  list.innerHTML = requests.length ? requests.map(x => `<div class="password-request"><div class="password-request-top"><b>${esc(x.username)}</b><span>${esc(x.status)}</span></div><small>${esc(new Date(x.createdAt).toLocaleString('de-DE'))}</small><div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="mini-btn" data-reset-user="${esc(x.username)}">PASSWORT SETZEN</button><button type="button" class="mini-btn" data-reset-delete="${esc(x.id)}">LÖSCHEN</button></div></div>`).join('') : '<div class="password-request">Keine Anfragen.</div>';
-}
-
-function renderAdmin() {
-  if (!currentUser || currentUser.role !== 'admin') return;
-  $('#aHeroTitle').value = state.heroTitle;
-  $('#aHeroText').value = state.heroText;
-  $('#aRelease').value = state.release;
-  $('#aPulse').value = state.pulse;
-  $('#adminPicks').innerHTML = (state.picks || []).map((p, i) => `<div class="admin-pick"><div class="password-request-top"><b>Pick ${i + 1}</b><button class="mini-btn" data-remove-pick="${i}" type="button">ENTFERNEN</button></div><div class="admin-grid"><label>Sport<input data-p="${i}" data-f="sport" value="${esc(p.sport)}"></label><label>Tag<input data-p="${i}" data-f="tag" value="${esc(p.tag || '')}"></label><label>Match<input data-p="${i}" data-f="match" value="${esc(p.match)}"></label><label>Tipp<input data-p="${i}" data-f="tip" value="${esc(p.tip)}"></label><label>Quote<input data-p="${i}" data-f="odd" value="${esc(p.odd || '')}"></label><label>Einschätzung<textarea data-p="${i}" data-f="reason" rows="2">${esc(p.reason || '')}</textarea></label></div></div>`).join('');
-  $$('[data-p]').forEach(el => el.addEventListener('input', () => { const i = Number(el.dataset.p); if (state.picks[i]) state.picks[i][el.dataset.f] = el.value; }));
-
-  const overrides = loadOverrides();
-  $('#adminLiveControls').innerHTML = (state.picks || []).map(p => {
-    const o = overrides[p.id] || {};
-    const t = teams(p);
-    return `<div class="admin-pick"><div class="password-request-top"><b>${esc(t.home)} — ${esc(t.away)}</b><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-live-enabled="${esc(p.id)}" ${o.enabled ? 'checked' : ''}> Override aktiv</label></div><div class="admin-grid"><label>Status<select data-live-field="status" data-live-id="${esc(p.id)}"><option value="upcoming" ${o.status === 'upcoming' ? 'selected' : ''}>Upcoming</option><option value="live" ${o.status === 'live' ? 'selected' : ''}>Live</option><option value="finished" ${o.status === 'finished' ? 'selected' : ''}>Beendet</option><option value="unavailable" ${o.status === 'unavailable' ? 'selected' : ''}>Keine Daten</option></select></label><label>Startzeit<input type="datetime-local" data-live-field="startAt" data-live-id="${esc(p.id)}" value="${dateInput(o.startAt)}"></label><label>Heim<input type="number" min="0" data-live-field="home" data-live-id="${esc(p.id)}" value="${Number(o.score?.home || 0)}"></label><label>Auswärts<input type="number" min="0" data-live-field="away" data-live-id="${esc(p.id)}" value="${Number(o.score?.away || 0)}"></label><label>Minute<input data-live-field="minute" data-live-id="${esc(p.id)}" value="${esc(o.minute || '')}" placeholder="72"></label><label>Event<input data-live-field="eventText" data-live-id="${esc(p.id)}" value="${esc(o.eventText || '')}" placeholder="72' Tor Heimteam"></label></div></div>`;
-  }).join('');
-  $$('[data-live-field],[data-live-enabled]').forEach(el => { el.addEventListener('input', collectLiveOverride); el.addEventListener('change', collectLiveOverride); });
-  renderRequests();
-}
-
-function collectLiveOverride() {
-  const overrides = loadOverrides();
-  (state.picks || []).forEach(p => {
-    const selector = CSS.escape(p.id);
-    const enabled = $(`[data-live-enabled="${selector}"]`)?.checked;
-    const read = field => $(`[data-live-field="${field}"][data-live-id="${selector}"]`)?.value || '';
-    const old = overrides[p.id] || {};
-    const eventText = read('eventText');
-    overrides[p.id] = {
-      ...old,
-      enabled: !!enabled,
-      status: read('status') || old.status || 'upcoming',
-      startAt: read('startAt') ? new Date(read('startAt')).toISOString() : old.startAt || null,
-      score: { home: Number(read('home') || 0), away: Number(read('away') || 0) },
-      minute: read('minute'),
-      eventText,
-      events: eventText ? [{ clock: read('minute') ? `${read('minute')}'` : '', type: 'EVENT', text: eventText }] : old.events || [],
-      source: 'ADMIN OVERRIDE'
-    };
-  });
-  saveOverrides(overrides);
-  updateAll();
-}
-
-function bindFilters() {
-  $$('.filter').forEach(button => button.addEventListener('click', () => {
-    $$('.filter').forEach(x => x.classList.remove('active'));
-    button.classList.add('active');
-    activeFilter = button.dataset.filter || 'all';
-    renderMatchBoard();
-  }));
-}
-
-function bindLogin() {
-  const form = $('#loginForm');
-  if (!form || form.dataset.bound === '1') return;
-  form.dataset.bound = '1';
-  form.addEventListener('submit', event => {
-    event.preventDefault();
-    const u = $('#loginUser')?.value.trim() || '';
-    const password = $('#loginPass')?.value || '';
-    const [resolved, account] = findUser(u);
-    const error = $('#loginError');
-    if (resolved && account && String(account.password) === String(password)) {
-      if (error) error.textContent = '';
-      unlock(resolved, account.role);
-      return;
-    }
-    // Falls ein alter lokaler Account einen veralteten Passwortwert enthält,
-    // akzeptieren wir einmalig die bekannten Standard-Zugangsdaten und
-    // synchronisieren den lokalen Account wieder mit der Standardkonfiguration.
-    const defaultAccount = Object.keys(DEFAULT_USERS).find(k => k.toLowerCase() === u.toLowerCase());
-    if (defaultAccount && DEFAULT_USERS[defaultAccount] && String(DEFAULT_USERS[defaultAccount].password) === String(password)) {
-      users[defaultAccount] = clone(DEFAULT_USERS[defaultAccount]);
-      saveUsers();
-      if (error) error.textContent = '';
-      unlock(defaultAccount, users[defaultAccount].role);
-      return;
-    }
-    if (error) error.textContent = 'Benutzername oder Passwort ist falsch.';
-    $('#loginPass')?.focus();
-  });
-}
-
-function bindAdmin() {
-  $('#adminOpen')?.addEventListener('click', () => { $('#adminPanel')?.classList.remove('hidden'); renderAdmin(); });
-  $('#adminClose')?.addEventListener('click', () => closeModal('#adminPanel'));
-  $('#addPick')?.addEventListener('click', () => {
-    state.picks.push({ id: `pick-${Date.now()}`, sport: 'FUSSBALL', match: 'Neue Partie — Gegner', tip: 'Heimsieg', reason: 'Neue WINTIQ Einschätzung.', tag: 'NEW', odd: '1.90' });
-    renderAdmin(); updateAll();
-  });
-  $('#adminPicks')?.addEventListener('click', event => {
-    const remove = event.target.closest('[data-remove-pick]');
-    if (!remove) return;
-    state.picks.splice(Number(remove.dataset.removePick), 1);
-    saveState(); renderAdmin(); updateAll();
-  });
-  $('#saveAdmin')?.addEventListener('click', () => {
-    state.heroTitle = $('#aHeroTitle').value;
-    state.heroText = $('#aHeroText').value;
-    state.release = $('#aRelease').value;
-    state.pulse = $('#aPulse').value;
-    saveState();
-    updateAll(); renderHero();
-    toast('Änderungen gespeichert ✓');
-    closeModal('#adminPanel');
-  });
-  $('#resetAdmin')?.addEventListener('click', () => {
-    if (!confirm('Demo wirklich zurücksetzen?')) return;
-    state = { ...clone(DEFAULTS), version: STATE_VERSION };
-    saveState(); renderHero(); updateAll(); toast('Demo zurückgesetzt');
-  });
-  $('#refreshPasswordRequests')?.addEventListener('click', renderRequests);
-  $('#passwordRequestList')?.addEventListener('click', event => {
-    const setButton = event.target.closest('[data-reset-user]');
-    const deleteButton = event.target.closest('[data-reset-delete]');
-    if (setButton) {
-      const [resolved] = findUser(setButton.dataset.resetUser);
-      if (!resolved) return;
-      const next = prompt(`Neues Passwort für ${resolved}:`, '');
-      if (!next) return;
-      if (next.length < 8) { toast('Passwort muss mindestens 8 Zeichen haben.'); return; }
-      users[resolved].password = next; saveUsers();
-      const requests = JSON.parse(localStorage.getItem('wintiqPasswordRequests') || '[]');
-      requests.forEach(x => { if (x.username === resolved && x.status === 'pending') { x.status = 'done'; x.completedAt = new Date().toISOString(); } });
-      localStorage.setItem('wintiqPasswordRequests', JSON.stringify(requests));
-      renderRequests(); toast('Passwort geändert ✓');
-    }
-    if (deleteButton) {
-      const requests = JSON.parse(localStorage.getItem('wintiqPasswordRequests') || '[]').filter(x => x.id !== deleteButton.dataset.resetDelete);
-      localStorage.setItem('wintiqPasswordRequests', JSON.stringify(requests)); renderRequests();
-    }
-  });
-}
-
-function init() {
-  bindLogin();
-  $('#forgotPasswordBtn')?.addEventListener('click', () => $('#resetModal')?.classList.remove('hidden'));
-  $('#resetClose')?.addEventListener('click', () => closeModal('#resetModal'));
-  $('#sendResetRequest')?.addEventListener('click', resetRequest);
-  $('#logout')?.addEventListener('click', lock);
-  $('#hamb')?.addEventListener('click', () => $('#mobile')?.classList.toggle('open'));
-  $$('#mobile a').forEach(a => a.addEventListener('click', () => $('#mobile')?.classList.remove('open')));
-  bindAdmin();
-  bindFilters();
-  renderHero();
-  updateAll();
-  countdown();
-  try {
-    const saved = JSON.parse(sessionStorage.getItem('wintiqUser') || 'null');
-    const [resolved, account] = findUser(saved?.user || '');
-    if (resolved && account && saved?.role === account.role) unlock(resolved, account.role);
-  } catch { sessionStorage.removeItem('wintiqUser'); }
-
-  loadStoredFeed().then(loadApiLive).then(loadMatchDetails).catch(() => {});
-  setInterval(() => { countdown(); updateAll(); }, 1000);
-  setInterval(async () => {
-    try { await loadStoredFeed(); await loadApiLive(); await loadMatchDetails(); } catch {}
-  }, REFRESH_MS);
-}
-
-document.addEventListener('DOMContentLoaded', init);
+boot();
+})();

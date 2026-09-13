@@ -1,29 +1,24 @@
-name: WINTIQ live data sync
-
+name: WINTIQ Live Sync
 on:
-  schedule:
-    - cron: '*/5 * * * *'
   workflow_dispatch:
-
+  schedule:
+    - cron: "*/5 * * * *"
 permissions:
   contents: write
-
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Sync live data
+      - name: Update live data
         run: node scripts/sync-live.mjs
-      - name: Commit updated live data
+      - name: Commit live data
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "wintiq-live-bot"
+          git config user.email "actions@users.noreply.github.com"
           git add live-data.json
-          git diff --cached --quiet || git commit -m "chore: sync live sports data"
+          git diff --cached --quiet || git commit -m "chore: update live data"
           git push
