@@ -178,3 +178,54 @@ async function boot(){
 }
 boot();
 })();
+
+/* ===== WINTIQ REAL MUSIC PLAYER ===== */
+(function initWintiqMusic() {
+  const audio = document.getElementById("wintiqMusic");
+  const toggle = document.getElementById("musicToggle");
+  const volume = document.getElementById("musicVolume");
+  const mute = document.getElementById("musicMute");
+  if (!audio || !toggle || !volume || !mute) return;
+
+  audio.volume = Number(volume.value || 0.35);
+  let muted = false;
+
+  function syncUI() {
+    const playing = !audio.paused;
+    toggle.textContent = playing ? "Ⅱ" : "▶";
+    toggle.setAttribute("aria-label", playing ? "Musik pausieren" : "Musik abspielen");
+    mute.textContent = muted || audio.volume === 0 ? "🔇" : "🔊";
+  }
+
+  toggle.addEventListener("click", async () => {
+    try {
+      if (audio.paused) {
+        await audio.play();
+      } else {
+        audio.pause();
+      }
+    } catch (err) {
+      console.warn("WINTIQ music could not start:", err);
+    }
+    syncUI();
+  });
+
+  volume.addEventListener("input", () => {
+    audio.volume = Number(volume.value);
+    muted = audio.volume === 0;
+    if (muted) audio.muted = true;
+    else audio.muted = false;
+    syncUI();
+  });
+
+  mute.addEventListener("click", () => {
+    muted = !muted;
+    audio.muted = muted;
+    syncUI();
+  });
+
+  audio.addEventListener("play", syncUI);
+  audio.addEventListener("pause", syncUI);
+  audio.addEventListener("volumechange", syncUI);
+  syncUI();
+})();

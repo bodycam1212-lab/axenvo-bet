@@ -126,5 +126,19 @@
 <div id="toast" class="toast"></div>
 
 <script src="script.js?v=release-1" defer></script>
+
+    <audio id="wintiqMusic" preload="metadata" loop>
+      <source src="music/true-colors.mp3" type="audio/mpeg">
+    </audio>
+    <div class="music-player" id="musicPlayer" aria-label="Musiksteuerung">
+      <button id="musicToggle" type="button" class="music-btn" aria-label="Musik an/aus">▶</button>
+      <div class="music-meta">
+        <span class="music-label">WINTIQ SOUND</span>
+        <strong>True Colors</strong>
+      </div>
+      <input id="musicVolume" class="music-volume" type="range" min="0" max="1" step="0.01" value="0.35" aria-label="Lautstärke">
+      <button id="musicMute" type="button" class="music-btn small" aria-label="Stumm">🔊</button>
+    </div>
+
 </body>
 </html>
