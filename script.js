@@ -20,7 +20,7 @@ const state = {
   users: load("wintiqAccounts", DEFAULT_USERS),
   overrides: load("wintiqOverrides", {}),
   settings: load("wintiqSettings", {intro:"Redaktionelle Tipps, echte Spielstände und ein Live-Ticker – alles an einem Ort.", refresh:15}),
-  feed:{events:[],updatedAt:null,source:"—",error:null},
+  feed:{events:[],updatedAt:null,fetchedAt:null,source:"—",error:null},
   user:null
 };
 
@@ -39,7 +39,12 @@ function eventTeams(e){const c=e?.competitions?.[0]?.competitors||[];return {hom
 function eventScore(e){const c=e?.competitions?.[0]?.competitors||[];return {home:Number(c.find(x=>x.homeAway==="home")?.score||0),away:Number(c.find(x=>x.homeAway==="away")?.score||0)}}
 function status(e){const t=e?.status?.type||{};if(t.completed||t.state==="post")return "finished";if(t.state==="in")return "live";return "upcoming"}
 function start(e){const n=Date.parse(e?.date||"");return Number.isFinite(n)?n:null}
-function minute(e){const d=e?.status?.displayClock||"";const m=String(d).match(/\d+/);return m?m[0]:""}
+function minute(e){const d=e?.status?.displayClock||e?.status?.displayValue||"";const m=String(d).match(/(\d+)(?::(\d+))?/);return m?m[1]:""}
+function parseMinute(v){const m=String(v??"").match(/(\d+)(?::(\d+))?/);return m?Number(m[1])+(Number(m[2]||0)/60):null}
+function runningMinute(l){if(l.status!=="live")return l.minute||"";const base=parseMinute(l.minute);if(base==null)return "LIVE";const anchor=Number(l.fetchedAt||state.feed.fetchedAt||Date.now());const elapsed=Math.max(0,(Date.now()-anchor)/60000);return String(Math.min(120,Math.floor(base+elapsed)))}
+function playText(x){return x?.text||x?.shortText||x?.type?.text||x?.type?.shortText||"Match-Event"}
+function normalizePlay(x){return {clock:x?.clock?.displayValue||x?.clock?.value||x?.period?.displayValue||"",text:playText(x),type:x?.type?.text||"Event",homeScore:x?.homeScore,awayScore:x?.awayScore,id:x?.id||null}}
+function extractPlays(event,summary){const raw=summary?.plays||event?.plays||event?.competitions?.[0]?.details||[];return Array.isArray(raw)?raw.map(normalizePlay).filter(x=>x.text):[]}
 function fmtDate(v,time=true){const n=typeof v==="number"?v:Date.parse(v||"");if(!Number.isFinite(n))return "—";return new Intl.DateTimeFormat("de-DE",{day:"2-digit",month:"2-digit",year:"numeric",...(time?{hour:"2-digit",minute:"2-digit"}:{})}).format(n)}
 function fmtClock(v){const n=typeof v==="number"?v:Date.parse(v||"");return Number.isFinite(n)?new Intl.DateTimeFormat("de-DE",{hour:"2-digit",minute:"2-digit"}).format(n):"—"}
 function duration(ms){if(ms<=0)return "jetzt";let s=Math.floor(ms/1000),h=Math.floor(s/3600);s%=3600;let m=Math.floor(s/60),sec=s%60;return h?`${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`:`${m}:${String(sec).padStart(2,"0")}`}
@@ -47,10 +52,10 @@ function currentOverride(p){const o=state.overrides[p.id];return o?.enabled?o:nu
 function findEvent(p){const [h,a]=splitMatch(p.match);return state.feed.events.find(x=>sameTeam(h,x.teams.home)&&sameTeam(a,x.teams.away)) || state.feed.events.find(x=>sameTeam(h,x.teams.away)&&sameTeam(a,x.teams.home)) || null}
 function getLive(p){
   const o=currentOverride(p);
-  if(o)return {status:o.status||"upcoming",score:o.score||{home:0,away:0},startAt:o.startAt||null,minute:o.minute||"",source:"ADMIN OVERRIDE",events:o.events||[],eventText:o.eventText||""};
+  if(o)return {status:o.status||"upcoming",score:o.score||{home:0,away:0},startAt:o.startAt||null,minute:o.minute||"",source:"ADMIN OVERRIDE",events:o.events||[],eventText:o.eventText||"",fetchedAt:o.fetchedAt||Date.now()};
   const e=findEvent(p);
   if(!e)return {status:"unavailable",score:{home:0,away:0},startAt:null,minute:"",source:"KEIN FEED",events:[],reason:"Kein bestätigtes Spiel im aktuellen Feed."};
-  return {status:status(e.event),score:eventScore(e.event),startAt:start(e.event),minute:minute(e.event),source:"ESPN",events:e.plays||[],teams:e.teams};
+  return {status:status(e.event),score:eventScore(e.event),startAt:start(e.event),minute:minute(e.event),source:"ESPN",events:e.plays||[],teams:e.teams,fetchedAt:state.feed.fetchedAt};
 }
 function verdict(p,l){
   if(l.status!=="finished" && l.status!=="live")return "pending";
@@ -63,8 +68,9 @@ function verdict(p,l){
 }
 function statusText(l){return l.status==="live"?"LIVE":l.status==="upcoming"?"STARTET BALD":l.status==="finished"?"BEENDET":"KEINE DATEN"}
 function scoreText(l){return l.status==="unavailable"?"— : —":`${l.score.home} : ${l.score.away}`}
-function timing(l){if(l.status==="live")return l.minute?`${l.minute}' · LIVE`:"LIVE";if(l.status==="upcoming"&&l.startAt)return `Start ${fmtDate(l.startAt)}`;if(l.status==="finished")return `Endstand · ${fmtDate(l.startAt)}`;return "Kein bestätigter Spielstand"}
+function timing(l){if(l.status==="live"){const m=runningMinute(l);return m&&m!=="LIVE"?`${m}' · LIVE`:"LIVE"}if(l.status==="upcoming"&&l.startAt)return `Start ${fmtDate(l.startAt)}`;if(l.status==="finished")return `Endstand · ${fmtDate(l.startAt)}`;return "Kein bestätigter Spielstand"}
 
+function goalChanged(p,l){if(l.status!=="live"&&l.status!=="finished")return false;const key=p.id+":"+l.score.home+":"+l.score.away;const prev=state.lastScores?.[p.id];if(!state.lastScores)state.lastScores={};state.lastScores[p.id]=key;return prev&&prev!==key}
 function render(){
   const picks=state.picks||[];
   const live=picks.map(p=>({p,l:getLive(p)}));
@@ -84,12 +90,14 @@ function render(){
   renderTicker(live);renderPicks(live);renderMonitor(live);renderEvents(live);
 }
 function renderTicker(items){
-  const el=$("#liveTicker");
-  if(!items.length){el.innerHTML="<div class='ticker-row'><div class='ticker-status'>WINTIQ</div><div>Keine Picks vorhanden.</div><div>—</div><div>—</div></div>";return}
-  el.innerHTML=items.map(({p,l})=>{const [h,a]=splitMatch(p.match);const cls=l.status==="live"?"live":"";return `<div class="ticker-row"><div class="ticker-status ${cls}">${l.status==="live"?"🔴 LIVE":statusText(l)}</div><div><b>${esc(h)}</b> <span>vs.</span> <b>${esc(a)}</b><div class="ticker-meta">${esc(timing(l))} · ${esc(fmtDate(l.startAt,false))}</div></div><div class="ticker-score">${scoreText(l)}</div><div class="ticker-meta">${esc(p.tip)}</div></div>`}).join("");
+  const el=$("#liveTicker"), strip=$("#liveStripTrack");
+  const sorted=[...items].sort((a,b)=>({live:0,upcoming:1,finished:2,unavailable:3}[a.l.status]-({live:0,upcoming:1,finished:2,unavailable:3}[b.l.status])));
+  if(!sorted.length){const empty="<div class='ticker-row'><div class='ticker-status'>WINTIQ</div><div>Keine Picks vorhanden.</div><div>—</div><div>—</div></div>";el.innerHTML=empty;if(strip)strip.innerHTML="<span class='strip-empty'>WINTIQ · Keine Live-Picks</span>";return}
+  el.innerHTML=sorted.map(({p,l})=>{const [h,a]=splitMatch(p.match);const cls=l.status==="live"?"live":"";const v=verdict(p,l);return `<div class="ticker-row ${cls}"><div class="ticker-status ${cls}">${l.status==="live"?"🔴 LIVE":statusText(l)}</div><div><b>${esc(h)}</b> <span>vs.</span> <b>${esc(a)}</b><div class="ticker-meta">${esc(timing(l))} · ${esc(l.startAt?fmtDate(l.startAt,false):"Datum —")}</div></div><div class="ticker-score ${cls}">${scoreText(l)}</div><div class="ticker-meta">${esc(p.tip)}${v==="correct"?" · ✓":v==="wrong"?" · ✕":""}</div></div>`}).join("");
+  if(strip)strip.innerHTML=sorted.map(({p,l})=>{const [h,a]=splitMatch(p.match);return `<div class="strip-item ${l.status}"><span class="strip-dot"></span><span class="strip-league">${esc(p.sport||"SPORT")}</span><b>${esc(h)}</b><strong>${scoreText(l)}</strong><b>${esc(a)}</b><span class="strip-time">${esc(timing(l))}</span></div>`}).join("");
 }
 function renderPicks(items){
-  $("#pickGrid").innerHTML=items.map(({p,l})=>{const [h,a]=splitMatch(p.match),v=verdict(p,l),statusCls=l.status==="live"?"live":l.status==="upcoming"?"upcoming":l.status==="finished"?"finished":"unavailable";const ev=(l.events||[]).slice(-4).reverse();return `<article class="pick-card"><div class="pick-top"><span class="pick-tag">${esc(p.tag||"WINTIQ PICK")}</span><span class="status ${statusCls}">${l.status==="live"?"🔴 LIVE":esc(statusText(l))}</span></div><div class="pick-body"><div class="sport">${esc(p.sport||"SPORT")}</div><div class="teams">${esc(h)}<br><span>vs.</span><br>${esc(a)}</div><div class="score">${scoreText(l)}</div><div class="match-info"><span class="chip">${esc(timing(l))}</span><span class="chip">${esc(l.startAt?fmtDate(l.startAt,false):"Datum —")}</span><span class="chip">${esc(l.source)}</span></div><div class="tip-box"><span>UNSER TIPP</span><strong>${esc(p.tip)}</strong></div><p class="reason">${esc(p.reason||"")}</p><div class="verdict ${v}">${v==="correct"?(l.status==="live"?"✓ AKTUELL RICHTIG":"✓ PICK RICHTIG"):v==="wrong"?(l.status==="live"?"✕ AKTUELL FALSCH":"✕ PICK FALSCH"):l.status==="unavailable"?"⚠ KEINE BESTÄTIGTEN DATEN":"◌ NOCH OFFEN"}</div>${ev.length?`<div class="events">${ev.map(e=>`<div class="event"><b>${esc(e.clock||"")}</b><span>${esc(e.text||e.type||"Event")}</span></div>`).join("")}</div>`:""}</div></article>`}).join("");
+  $("#pickGrid").innerHTML=items.map(({p,l})=>{const [h,a]=splitMatch(p.match),v=verdict(p,l),statusCls=l.status==="live"?"live":l.status==="upcoming"?"upcoming":l.status==="finished"?"finished":"unavailable";const ev=(l.events||[]).slice(-5).reverse();const flash=goalChanged(p,l);return `<article class="pick-card ${flash?"score-flash":""}"><div class="pick-top"><span class="pick-tag">${esc(p.tag||"WINTIQ PICK")}</span><span class="status ${statusCls}">${l.status==="live"?"🔴 LIVE":esc(statusText(l))}</span></div><div class="pick-body"><div class="sport">${esc(p.sport||"SPORT")}</div><div class="teams">${esc(h)}<br><span>vs.</span><br>${esc(a)}</div><div class="score-wrap"><div class="score">${scoreText(l)}</div>${l.status==="live"?`<div class="minute-live"><i></i>${esc(timing(l))}</div>`:""}</div><div class="match-info"><span class="chip">${esc(timing(l))}</span><span class="chip">${esc(l.startAt?fmtDate(l.startAt,false):"Datum —")}</span><span class="chip">${esc(l.source)}</span></div><div class="tip-box"><span>UNSER TIPP</span><strong>${esc(p.tip)}</strong></div><p class="reason">${esc(p.reason||"")}</p><div class="verdict ${v}">${v==="correct"?(l.status==="live"?"✓ AKTUELL RICHTIG":"✓ PICK RICHTIG"):v==="wrong"?(l.status==="live"?"✕ AKTUELL FALSCH":"✕ PICK FALSCH"):l.status==="unavailable"?"⚠ KEINE BESTÄTIGTEN DATEN":"◌ NOCH OFFEN"}</div>${ev.length?`<div class="events">${ev.map(e=>`<div class="event"><b>${esc(e.clock||"")}</b><span>${esc(e.text||e.type||"Event")}</span></div>`).join("")}</div>`:""}</div></article>`}).join("");
 }
 function renderMonitor(items){
   const x=items.find(v=>v.l.status==="live")||items.find(v=>v.l.status==="upcoming");
@@ -111,9 +119,13 @@ async function refreshFeed(){
   for(let i=-1;i<=1;i++){const d=new Date(now);d.setDate(d.getDate()+i);dates.push(`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`)}
   const results=await Promise.allSettled(LEAGUES.flatMap(l=>dates.map(d=>fetchScoreboard(l,d))));
   const events=[];
-  results.forEach(r=>{if(r.status!=="fulfilled")return;(r.value.events||[]).forEach(e=>events.push({event:e,teams:eventTeams(e),league:e.league?.slug||"soccer"}))});
-  state.feed.events=events;state.feed.updatedAt=Date.now();state.feed.source="ESPN";state.feed.error=results.every(r=>r.status==="rejected")?"Alle Feed-Anfragen fehlgeschlagen":null;render();
-  save("wintiqLastFeed",{updatedAt:state.feed.updatedAt,events:events});
+  results.forEach(r=>{if(r.status!=="fulfilled")return;(r.value.events||[]).forEach(e=>events.push({event:e,teams:eventTeams(e),league:e.league?.slug||"soccer",plays:extractPlays(e,null)}))});
+  // Pull full match summaries for the games represented by WINTIQ picks. This supplies reliable goal/event data.
+  const relevant=events.filter(x=>state.picks.some(p=>{const [h,a]=splitMatch(p.match);return sameTeam(h,x.teams.home)&&sameTeam(a,x.teams.away)||sameTeam(h,x.teams.away)&&sameTeam(a,x.teams.home)}));
+  await Promise.allSettled(relevant.map(async x=>{try{const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${x.league}/summary?event=${encodeURIComponent(x.event.id)}`,{cache:"no-store"});if(r.ok){const s=await r.json();x.plays=extractPlays(x.event,s)}}catch{}}));
+  const fetchedAt=Date.now();
+  state.feed.events=events;state.feed.updatedAt=fetchedAt;state.feed.fetchedAt=fetchedAt;state.feed.source="ESPN";state.feed.error=results.every(r=>r.status==="rejected")?"Alle Feed-Anfragen fehlgeschlagen":null;render();
+  save("wintiqLastFeed",{updatedAt:state.feed.updatedAt,fetchedAt:state.feed.fetchedAt,events:events.map(({event,teams,league,plays})=>({event,teams,league,plays}))});
 }
 function loadLastFeed(){const f=load("wintiqLastFeed",null);if(f?.events?.length){state.feed={...state.feed,...f,source:"ESPN (cached)"}}}
 
